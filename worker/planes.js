@@ -1,6 +1,7 @@
 // Relais Cloudflare Worker : la télé ne peut pas lire adsb.lol directement (pas de CORS).
 // Ce worker transmet /v2/point/<lat>/<lon>/<rayon en NM> et ajoute l'en-tête qui manque.
-// Déploiement : dash.cloudflare.com -> Workers -> Create -> coller ce fichier -> Deploy.
+// Déploiement : Cloudflare -> Workers & Pages -> Create -> Import a repository (dossier worker),
+// ou coller ce fichier dans un worker « Hello World ».
 export default {
   async fetch(request) {
     const url = new URL(request.url);

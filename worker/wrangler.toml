@@ -1,0 +1,4 @@
+# Déployé par Cloudflare (Workers Builds) depuis ce dépôt, dossier racine : worker
+name = "tram-avions"
+main = "planes.js"
+compatibility_date = "2025-09-01"

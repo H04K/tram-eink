@@ -102,7 +102,7 @@ télé les lise chaque seconde, il faut un relais :
 
 Sans relais, les avions viennent du relevé de GitHub (toutes les 10 min) et l'écran l'indique.
 
-Radio en bas à droite (Lofi, Nightwave Plaza, Yumi Co. Radio, Rainwave Chill et Gamesboro
+Radio en bas à droite (France Inter, Nostalgie, Lofi, Nightwave Plaza, Yumi Co. Radio, Rainwave Chill et Gamesboro
 pour les musiques de jeux vidéo) : **OK** sur la télécommande pour
 lancer / couper, **◀ ▶** pour changer. Les positions d'avions sont en direct avec le serveur
 maison ; sur GitHub Pages elles datent du dernier passage (10 min) et sont extrapolées.

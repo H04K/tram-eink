@@ -83,6 +83,8 @@ def positions():
     for a in ac:
         if "lat" not in a or a.get("alt_baro") in (None, "ground"):
             continue
+        if a["alt_baro"] < 100 and (a.get("gs") or 0) < 60:  # au sol (roulage)
+            continue
         dist, brg = _distance(C.HOME_LAT, C.HOME_LON, a["lat"], a["lon"])
         if dist > C.PLANES_RADIUS_KM:
             continue
@@ -90,7 +92,8 @@ def positions():
                     "type": TYPES.get(a.get("t", ""), a.get("t", "?")), "alt_ft": int(a["alt_baro"]),
                     "gs_kt": a.get("gs", 0) or 0, "track": a.get("track", 0) or 0,
                     "lat": a["lat"], "lon": a["lon"], "dist_km": round(dist, 2), "bearing": brg,
-                    "vrate": a.get("baro_rate", 0) or 0})
+                    "vrate": a.get("baro_rate", 0) or 0, "reg": a.get("r", ""),
+                    "squawk": a.get("squawk", ""), "icao_type": a.get("t", "")})
     return sorted(out, key=lambda p: p["dist_km"])
 
 

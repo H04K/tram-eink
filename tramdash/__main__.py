@@ -4,7 +4,7 @@ import os
 import shutil
 from datetime import datetime, timedelta
 
-from . import aviation, render, tbm, weather
+from . import aviation, news, render, tbm, weather
 from . import config as C
 from .render import fr
 
@@ -99,7 +99,7 @@ def build(now):
               "refresh_s": refresh_s(mode, day, now), "commute": state.get("commute"),
               "metar": state["metar"], "alerts": state["alerts"],
               # pour la page télé animée, qui recalcule tout chaque seconde
-              "trams": trams, "planes": positions, "config": tv_config()}
+              "trams": trams, "planes": positions, "news": news.headlines(), "config": tv_config()}
     return render.render(state), status
 
 

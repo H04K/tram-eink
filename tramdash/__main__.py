@@ -1,6 +1,7 @@
 """python -m tramdash  ->  public/dashboard.png + dashboard.bin + status.json"""
 import json
 import os
+import shutil
 from datetime import datetime, timedelta
 
 from . import aviation, render, tbm, weather
@@ -12,12 +13,11 @@ def at(day, hhmm):
     return datetime.combine(day, datetime.strptime(hhmm, "%H:%M").time(), C.TZ)
 
 
-def commute(day, now, wx):
+def commute(day, now, wx, deps):
     """Contenu du panneau ALLER."""
     walk = timedelta(minutes=C.WALK_MIN)
     live = day == now.date()
     lo, hi = at(day, C.TRAM_FROM), at(day, C.TRAM_UNTIL)
-    deps = tbm.departures(day)
     window = [x for x in deps if lo <= x.dep <= hi + timedelta(seconds=59)]
     options = [x for x in window if x.dep - walk >= now] if live else window
     ideal = at(day, C.LEAVE_AT)
@@ -80,17 +80,37 @@ def build(now):
 
     state = dict(now=now, day=day, mode=mode, weather=weather.forecast(day),
                  metar=aviation.metar(), alerts=[])
+    trams, positions = [], aviation.positions()  # la télé affiche les avions à toute heure
     if mode == "commute":
-        state["commute"] = commute(day, now, state["weather"])
+        deps = tbm.departures(day)
+        state["commute"] = commute(day, now, state["weather"], deps)
         state["session"] = C.SESSIONS.get(day.weekday(), "REPOS")
         state["next_session"] = C.SESSIONS.get((day + timedelta(days=1)).weekday())
         state["alerts"] = tbm.alerts(now)
+        lo = at(day, C.TRAM_FROM) - timedelta(hours=1)
+        hi = at(day, C.TRAM_UNTIL) + timedelta(hours=1)
+        trams = [{"trip_id": x.trip_id, "dep": x.dep.isoformat(), "arr": x.arr.isoformat(),
+                  "delay_min": x.delay_min, "realtime": x.realtime}
+                 for x in deps if lo <= x.dep <= hi]
     else:
-        state["planes"] = aviation.planes()
+        state["planes"] = aviation.planes(positions)
 
-    status = {"generated": now.isoformat(), "mode": mode, "refresh_s": refresh_s(mode, day, now),
-              "commute": state.get("commute"), "metar": state["metar"]}
+    status = {"generated": now.isoformat(), "mode": mode, "day": day.isoformat(),
+              "refresh_s": refresh_s(mode, day, now), "commute": state.get("commute"),
+              "metar": state["metar"], "alerts": state["alerts"],
+              # pour la page télé animée, qui recalcule tout chaque seconde
+              "trams": trams, "planes": positions, "config": tv_config()}
     return render.render(state), status
+
+
+def tv_config():
+    return {"route_id": C.ROUTE_ID, "route": C.ROUTE_NAME, "from_stop": C.FROM_STOP,
+            "to_stop": C.TO_STOP, "from_name": C.FROM_NAME, "to_name": C.TO_NAME,
+            "walk_min": C.WALK_MIN, "leave_at": C.LEAVE_AT, "tram_from": C.TRAM_FROM,
+            "tram_until": C.TRAM_UNTIL, "workdays": sorted(C.WORKDAYS),
+            "switch_hour": C.SWITCH_HOUR, "sessions": C.SESSIONS, "muscles": C.MUSCLES,
+            "home": [C.HOME_LAT, C.HOME_LON], "weather": [C.LAT, C.LON],
+            "radius_km": C.PLANES_RADIUS_KM, "rt_url": C.GTFS_RT_TRIPS_URL}
 
 
 def main():
@@ -105,6 +125,10 @@ def main():
         f.write(render.to_bin(img))
     with open(os.path.join(C.OUT_DIR, "status.json"), "w") as f:
         json.dump(status, f, ensure_ascii=False, indent=1)
+    # pages pour un navigateur (télé, tablette) : la version animée et l'image e-ink seule
+    here = os.path.dirname(__file__)
+    shutil.copy(os.path.join(here, "tv.html"), os.path.join(C.OUT_DIR, "index.html"))
+    shutil.copy(os.path.join(here, "image.html"), os.path.join(C.OUT_DIR, "image.html"))
     print("ok:", status["mode"], status["generated"], status.get("commute") or "")
 
 

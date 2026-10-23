@@ -5,9 +5,9 @@ name: render
 on:
   schedule:
     - cron: "*/5 4-6 * * 1-5"      # matins de semaine : temps réel du tram
-    - cron: "3 11,17,20 * * 1-5"   # midi et soir : aperçu du lendemain
+    - cron: "3 11 * * 1-5"         # midi : aperçu du lendemain
+    - cron: "*/10 14-21 * * 1-5"   # soirs de semaine : avions pour la télé
     - cron: "*/10 7-20 * * 0,6"    # week-end : avions
-    - cron: "*/10 17-20 * * 5"     # vendredi soir : avions
   workflow_dispatch:
 
 permissions:

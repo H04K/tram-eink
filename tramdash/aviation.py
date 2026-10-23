@@ -70,7 +70,8 @@ def _route(callsign):
     return cache[callsign]
 
 
-def planes():
+def positions():
+    """Avions en vol dans le rayon : liste de dicts bruts (pour la page télé animée)."""
     nm = math.ceil(C.PLANES_RADIUS_KM / 1.852) + 1
     try:
         ac = json.loads(get(f"https://api.adsb.lol/v2/point/{C.HOME_LAT}/{C.HOME_LON}/{nm}",
@@ -85,10 +86,20 @@ def planes():
         dist, brg = _distance(C.HOME_LAT, C.HOME_LON, a["lat"], a["lon"])
         if dist > C.PLANES_RADIUS_KM:
             continue
-        cs = (a.get("flight") or a.get("r") or a["hex"]).strip()
-        out.append(Plane(cs, TYPES.get(a.get("t", ""), a.get("t", "?")), int(a["alt_baro"]),
-                         dist, brg, a.get("track", 0) or 0))
-    out.sort(key=lambda p: p.dist_km)
+        out.append({"hex": a["hex"], "callsign": (a.get("flight") or a.get("r") or a["hex"]).strip(),
+                    "type": TYPES.get(a.get("t", ""), a.get("t", "?")), "alt_ft": int(a["alt_baro"]),
+                    "gs_kt": a.get("gs", 0) or 0, "track": a.get("track", 0) or 0,
+                    "lat": a["lat"], "lon": a["lon"], "dist_km": round(dist, 2), "bearing": brg,
+                    "vrate": a.get("baro_rate", 0) or 0})
+    return sorted(out, key=lambda p: p["dist_km"])
+
+
+def planes(raw=None):
+    raw = positions() if raw is None else raw
+    if raw is None:
+        return None
+    out = [Plane(r["callsign"], r["type"], r["alt_ft"], r["dist_km"], r["bearing"], r["track"])
+           for r in raw]
     for p in out[:4]:
         p.airline, p.route, origin, dest = _route(p.callsign)
         if origin:

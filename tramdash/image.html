@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tram-eink</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #fff; overflow: hidden; cursor: none; }
+  body { display: flex; align-items: center; justify-content: center; }
+  img { width: 100vw; height: 100vh; object-fit: contain; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<img id="d" src="dashboard.png" alt="">
+<script>
+  // recharge l'image chaque minute (le paramètre évite le cache du navigateur de la télé)
+  var img = document.getElementById("d");
+  setInterval(function () {
+    var next = new Image();
+    next.onload = function () { img.src = next.src; };
+    next.src = "dashboard.png?t=" + Date.now();
+  }, 60000);
+  // et la page entière toutes les 6 h, au cas où le navigateur se fige
+  setTimeout(function () { location.reload(); }, 6 * 3600 * 1000);
+</script>
+</body>
+</html>

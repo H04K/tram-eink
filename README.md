@@ -72,6 +72,24 @@ laisser branché en USB-C.
 L'écran se réveille, lit `status.json` (`refresh_s`), télécharge `dashboard.bin`, ne
 redessine que si l'image a changé, puis se rendort. Bouton vert : rafraîchir tout de suite.
 
+## Sur la télé
+
+`https://h04k.github.io/tram-eink/` dans le navigateur de la télé (ou `http://<ip>:8080/`
+en mode direct) : une page plein écran en noir et blanc, animée à la seconde, avec trois écrans :
+
+- **le matin** (semaine, jusqu'à 30 min après le dernier tram) : compte à rebours avant de
+  partir, trams en temps réel (lus directement chez TBM), séance du jour, pluie heure par heure ;
+- **le soir** (semaine, le reste de la journée) : météo de ce soir et de demain, heure de départ
+  de demain, actu en direct (franceinfo + Sud Ouest Bordeaux), radar des avions ;
+- **le week-end** : radar, avion le plus proche avec sa route, météo, actu qui défile.
+
+Radio en bas à droite (lofi, Nightwave Plaza, Vaporwaves) : **OK** sur la télécommande pour
+lancer / couper, **◀ ▶** pour changer. Les positions d'avions sont en direct avec le serveur
+maison ; sur GitHub Pages elles datent du dernier passage (10 min) et sont extrapolées.
+`image.html` affiche simplement l'image de l'écran e-ink.
+
+Pour tester une autre heure : `?now=2026-10-26T06:20` ; sans radio : `?radio=0`.
+
 ## Mise en ligne
 
 1. Pousser ce dépôt sur GitHub.

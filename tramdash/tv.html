@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tram-eink TV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; cursor: none; background: #fff; color: #000; }
+  body { font-family: "Fraunces", Georgia, serif; font-variation-settings: "SOFT" 0, "WONK" 0; }
+  #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 50% 50%; }
+  .abs { position: absolute; }
+  .label { font-size: 26px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .num { font-variant-numeric: tabular-nums; }
+  .hidden { display: none !important; }
+  .panel { background: #000; color: #fff; }
+  .panel > .label { position: absolute; left: 34px; top: 26px; }
+
+  /* en-tête */
+  #dayname { left: 56px; top: 22px; font-size: 168px; font-weight: 900; line-height: 1; letter-spacing: -.01em; }
+  #scene { left: 62px; top: 190px; font-size: 26px; }
+  #clock { right: 56px; top: 26px; text-align: right; font-weight: 800; line-height: 1; }
+  #hm { font-size: 150px; }
+  #ss { font-size: 60px; font-weight: 400; margin-left: 8px; display: inline-block; width: 72px; text-align: left; }
+  #date { right: 56px; top: 186px; font-size: 30px; text-align: right; }
+  #rule { left: 56px; right: 56px; top: 232px; height: 7px; background: #000; }
+
+  /* rangée météo (matin, week-end) */
+  #wicon { left: 56px; top: 262px; width: 200px; height: 200px; }
+  #wtemp { left: 290px; top: 250px; font-size: 128px; font-weight: 800; line-height: 1; }
+  #wtemp small { font-size: 56px; font-weight: 400; }
+  #wcond { left: 296px; top: 392px; font-size: 42px; font-weight: 600; }
+  #wsun { left: 298px; top: 448px; font-size: 24px; }
+  #chart { left: 900px; top: 262px; }
+  #chartlabel { right: 56px; top: 466px; font-size: 22px; }
+
+  /* matin : tram + séance */
+  #tram { left: 56px; top: 514px; width: 1064px; height: 400px; }
+  #tram.inverse { background: #fff; color: #000; box-shadow: inset 0 0 0 7px #000; }
+  #countdown { left: 30px; top: 66px; font-size: 200px; font-weight: 900; line-height: 1; }
+  #tramside { left: 590px; top: 66px; right: 30px; }
+  #leave { font-size: 30px; font-weight: 600; }
+  #leave b { font-size: 72px; font-weight: 900; display: block; line-height: 1.05; }
+  #trams { font-size: 28px; font-weight: 600; margin-top: 10px; line-height: 1.38; }
+  #trams .best { font-weight: 900; text-decoration: underline; text-underline-offset: 6px; }
+  #trams .late { font-weight: 900; }
+  #progress { left: 34px; right: 34px; bottom: 76px; height: 6px; background: rgba(255,255,255,.25); }
+  #tram.inverse #progress { background: rgba(0,0,0,.2); }
+  #bar { height: 100%; width: 100%; background: currentColor; transition: width 1s linear; }
+  #tramfoot { left: 34px; right: 34px; bottom: 24px; font-size: 26px; display: flex; justify-content: space-between; }
+  #gym { left: 1150px; top: 514px; width: 714px; height: 400px; }
+  #session { left: 30px; top: 66px; font-size: 180px; font-weight: 900; line-height: 1; }
+  #muscles { left: 36px; top: 262px; font-size: 30px; font-weight: 600; }
+  #week { left: 34px; right: 34px; bottom: 26px; display: flex; gap: 10px; }
+  .day { flex: 1; text-align: center; padding: 8px 0 10px; border: 2px solid #fff; font-size: 22px; font-weight: 600; }
+  .day b { display: block; font-size: 16px; letter-spacing: .1em; font-weight: 800; }
+  .day.today { background: #fff; color: #000; }
+
+  /* soir : ce soir / demain / actu / radar */
+  #tonight { left: 56px; top: 262px; width: 560px; height: 228px; }
+  #tonight svg { left: 0; top: 10px; width: 150px; height: 150px; }
+  #ntemp { left: 176px; top: 0; font-size: 120px; font-weight: 800; line-height: 1; }
+  #ncond { left: 180px; top: 128px; font-size: 34px; font-weight: 600; }
+  #nwind { left: 182px; top: 176px; font-size: 24px; }
+  #tomorrow { left: 646px; top: 262px; width: 560px; height: 228px; border-left: 3px solid #000; padding-left: 36px; }
+  #tomorrow .label { font-size: 22px; }
+  #ttemp { left: 36px; top: 40px; font-size: 92px; font-weight: 800; line-height: 1; }
+  #ttemp small { font-size: 44px; font-weight: 400; }
+  #tcond { left: 38px; top: 142px; font-size: 32px; font-weight: 600; }
+  #train { left: 40px; top: 188px; font-size: 24px; }
+  #nextday { left: 1240px; top: 262px; width: 624px; height: 228px; }
+  #nextday .label { top: 22px; font-size: 22px; }
+  #ndbig { left: 30px; top: 58px; font-size: 96px; font-weight: 900; line-height: 1; }
+  #ndline { left: 34px; top: 168px; font-size: 26px; font-weight: 600; }
+  #news { left: 56px; top: 514px; width: 1124px; height: 400px; border-top: 7px solid #000; }
+  #news .label { position: absolute; left: 0; top: 18px; }
+  #newssrc { right: 0; top: 18px; font-size: 22px; }
+  #headline { left: 0; top: 62px; right: 0; height: 196px; font-size: 52px; font-weight: 800; line-height: 1.12;
+    overflow: hidden; transition: opacity .6s; }
+  #headmeta { left: 0; top: 262px; font-size: 22px; }
+  #headbar { left: 0; right: 0; top: 296px; height: 4px; background: #000; transform-origin: left; }
+  #newslist { left: 0; right: 0; top: 314px; font-size: 24px; line-height: 1.45; }
+  #newslist div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #radar2box { left: 1210px; top: 514px; width: 654px; height: 400px; box-shadow: inset 0 0 0 5px #000; }
+  #near2 { left: 26px; right: 26px; bottom: 16px; font-size: 22px; font-weight: 600; text-align: center; }
+
+  /* week-end : radar + avions */
+  #radarbox { left: 56px; top: 514px; width: 560px; height: 400px; box-shadow: inset 0 0 0 5px #000; }
+  #flights { left: 646px; top: 514px; width: 1218px; height: 400px; }
+  #stale { right: 34px; top: 26px; font-size: 22px; }
+  #f1cs { left: 30px; top: 62px; font-size: 120px; font-weight: 900; line-height: 1; }
+  #f1who { left: 36px; top: 192px; font-size: 32px; font-weight: 600; }
+  #f1route { left: 36px; top: 236px; font-size: 40px; font-weight: 800; }
+  #f1stats { left: 36px; right: 34px; top: 300px; display: flex; gap: 46px; font-size: 40px; font-weight: 800; }
+  #f1stats span { display: block; font-size: 17px; letter-spacing: .12em; font-weight: 600; }
+  #others { right: 34px; top: 74px; width: 400px; font-size: 22px; line-height: 1.6; text-align: right; }
+  #others b { font-weight: 800; }
+
+  /* bas : bandeau + radio */
+  #ticker { left: 56px; top: 946px; width: 1220px; height: 90px; overflow: hidden; border-top: 3px solid #000; }
+  #tickertext { position: absolute; top: 26px; white-space: nowrap; font-family: "IBM Plex Mono", monospace; font-size: 30px;
+    animation: scroll 60s linear infinite; }
+  @keyframes scroll { from { transform: translateX(1220px); } to { transform: translateX(-100%); } }
+  #radio { left: 1306px; top: 946px; width: 558px; height: 90px; border-top: 3px solid #000; }
+  #play { left: 0; top: 22px; width: 52px; height: 52px; border: 4px solid #000; border-radius: 50%; }
+  #play::after { content: ""; position: absolute; left: 16px; top: 10px; border-left: 20px solid #000;
+    border-top: 12px solid transparent; border-bottom: 12px solid transparent; }
+  #radio.on #play::after { left: 12px; top: 11px; width: 20px; height: 22px; border: 0;
+    border-left: 7px solid #000; border-right: 7px solid #000; }
+  #station { left: 72px; top: 16px; font-size: 32px; font-weight: 800; white-space: nowrap; }
+  #hint { left: 74px; top: 56px; font-size: 19px; }
+  #eq { right: 0; top: 24px; height: 46px; display: flex; align-items: flex-end; gap: 6px; }
+  #eq i { display: block; width: 9px; height: 6px; background: #000; }
+  #radio.on #eq i { animation: eq .8s ease-in-out infinite alternate; }
+  #eq i:nth-child(2) { animation-delay: -.3s !important; } #eq i:nth-child(3) { animation-delay: -.6s !important; }
+  #eq i:nth-child(4) { animation-delay: -.15s !important; } #eq i:nth-child(5) { animation-delay: -.45s !important; }
+  @keyframes eq { from { height: 6px; } to { height: 46px; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="dayname" class="abs">&nbsp;</div>
+  <div id="scene" class="abs label"></div>
+  <div id="clock" class="abs num"><span id="hm">--:--</span><span id="ss">--</span></div>
+  <div id="date" class="abs"></div>
+  <div id="rule" class="abs"></div>
+
+  <!-- météo du jour : matin et week-end -->
+  <div id="wrow" class="hidden">
+    <svg id="wicon" class="abs" viewBox="0 0 200 200"></svg>
+    <div id="wtemp" class="abs"></div>
+    <div id="wcond" class="abs"></div>
+    <div id="wsun" class="abs"></div>
+    <canvas id="chart" class="abs" width="964" height="196"></canvas>
+    <div id="chartlabel" class="abs">risque de pluie par heure</div>
+  </div>
+
+  <!-- MATIN -->
+  <div id="matin" class="hidden">
+    <section id="tram" class="abs panel">
+      <div class="label" id="tramlabel">aller · pars dans</div>
+      <div id="countdown" class="abs num">--:--</div>
+      <div id="tramside" class="abs"><div id="leave"></div><div id="trams"></div></div>
+      <div id="progress" class="abs"><div id="bar"></div></div>
+      <div id="tramfoot" class="abs"><span id="tramline"></span><span id="tramrt"></span></div>
+    </section>
+    <section id="gym" class="abs panel">
+      <div class="label">séance</div>
+      <div id="session" class="abs"></div>
+      <div id="muscles" class="abs"></div>
+      <div id="week" class="abs"></div>
+    </section>
+  </div>
+
+  <!-- SOIR -->
+  <div id="soir" class="hidden">
+    <div id="tonight" class="abs">
+      <div class="label abs" style="left:0;top:-4px;font-size:22px">ce soir</div>
+      <svg id="nicon" class="abs" viewBox="0 0 200 200" style="left:0;top:40px;width:150px;height:150px"></svg>
+      <div id="ntemp" class="abs" style="top:30px"></div>
+      <div id="ncond" class="abs" style="top:150px"></div>
+      <div id="nwind" class="abs" style="top:196px"></div>
+    </div>
+    <div id="tomorrow" class="abs">
+      <div class="label abs" style="left:36px;top:-4px">demain</div>
+      <div id="ttemp" class="abs"></div>
+      <div id="tcond" class="abs"></div>
+      <div id="train" class="abs"></div>
+    </div>
+    <section id="nextday" class="abs panel">
+      <div class="label">demain matin</div>
+      <div id="ndbig" class="abs"></div>
+      <div id="ndline" class="abs"></div>
+    </section>
+    <section id="news" class="abs">
+      <div class="label">actu en direct</div>
+      <div id="newssrc" class="abs">franceinfo · Sud Ouest Bordeaux</div>
+      <div id="headline" class="abs"></div>
+      <div id="headmeta" class="abs"></div>
+      <div id="headbar" class="abs"></div>
+      <div id="newslist" class="abs"></div>
+    </section>
+    <section id="radar2box" class="abs"><canvas id="radar2" class="abs" width="654" height="400"></canvas>
+      <div id="near2" class="abs"></div></section>
+  </div>
+
+  <!-- WEEK-END -->
+  <div id="weekend" class="hidden">
+    <section id="radarbox" class="abs"><canvas id="radar" class="abs" width="560" height="400"></canvas></section>
+    <section id="flights" class="abs panel">
+      <div class="label">au-dessus de chez toi</div>
+      <div id="stale" class="abs"></div>
+      <div id="f1cs" class="abs"></div>
+      <div id="f1who" class="abs"></div>
+      <div id="f1route" class="abs"></div>
+      <div id="f1stats" class="abs"></div>
+      <div id="others" class="abs"></div>
+    </section>
+  </div>
+
+  <section id="ticker" class="abs"><div id="tickertext"></div></section>
+  <section id="radio" class="abs">
+    <div id="play" class="abs"></div>
+    <div id="station" class="abs"></div>
+    <div id="hint" class="abs">OK : lecture · ◀ ▶ : station</div>
+    <div id="eq" class="abs"><i></i><i></i><i></i><i></i><i></i></div>
+  </section>
+</div>
+<audio id="audio" preload="none"></audio>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var JOURS = ["DIMANCHE", "LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI"];
+  var MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  var COND = { 0: "Grand soleil", 1: "Plutôt dégagé", 2: "Éclaircies", 3: "Couvert", 45: "Brouillard", 48: "Brouillard givrant",
+    51: "Bruine", 53: "Bruine", 55: "Grosse bruine", 61: "Pluie faible", 63: "Pluie", 65: "Forte pluie",
+    71: "Neige faible", 73: "Neige", 75: "Forte neige", 80: "Averses", 81: "Averses", 82: "Grosses averses",
+    95: "Orages", 96: "Orages et grêle", 99: "Orages et grêle" };
+  var STATIONS = [
+    { name: "Lofi · laut.fm", url: "https://stream.laut.fm/lofi" },
+    { name: "Nightwave Plaza", url: "https://radio.plaza.one/mp3" },
+    { name: "Vaporwaves · SomaFM", url: "https://ice2.somafm.com/vaporwaves-128-mp3" }
+  ];
+  var FEEDS = [
+    { name: "franceinfo", url: "https://www.francetvinfo.fr/titres.rss" },
+    { name: "Sud Ouest", url: "https://www.sudouest.fr/gironde/bordeaux/rss.xml" }
+  ];
+  var EVENING_HOUR = 16;   // à partir de 16 h en semaine : écran du soir
+  var CHART_HOURS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+  var params = new URLSearchParams(location.search);
+  var PLANES_URL = params.get("planes") || "planes.json";
+  // ?now=2026-10-26T06:20 : simuler une autre heure (pour tester)
+  var OFFSET = params.get("now") ? new Date(params.get("now")).getTime() - Date.now() : 0;
+  function nowDate() { return new Date(Date.now() + OFFSET); }
+
+  var status = null, cfg = null, wx = null, rt = {}, planes = {}, planesLive = false, planesAt = 0, routes = {};
+  var news = [], newsIdx = 0, newsAt = 0;
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function hm(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function atTime(day, hhmm) { var p = hhmm.split(":"); var d = new Date(day); d.setHours(+p[0], +p[1], 0, 0); return d; }
+  function sameDay(a, b) { return a.toDateString() === b.toDateString(); }
+  function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function isoDay(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function fr(x) { return x.toFixed(1).replace(".", ","); }
+  function ft(x) { return x.toLocaleString("fr-FR") + " ft"; }
+  function weekday(d) { return (d.getDay() + 6) % 7; }  // 0 = lundi
+  function workday(d) { return cfg.workdays.indexOf(weekday(d)) >= 0; }
+  function getJSON(url) { return fetch(url, { cache: "no-store" }).then(function (r) { if (!r.ok) throw r.status; return r.json(); }); }
+
+  function fit() {
+    var s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    $("stage").style.transform = "translate(-50%, -50%) scale(" + s + ")";
+  }
+  addEventListener("resize", fit); fit();
+
+  // --- quel écran : matin (jusqu'au départ), soir, week-end -------------
+  function sceneOf(now) {
+    if (!workday(now)) return "weekend";
+    var end = atTime(now, cfg.tram_until).getTime() + 30 * 60000;  // une demi-heure après le dernier tram
+    if (now.getHours() >= 4 && now.getTime() < end) return "matin";
+    return "soir";
+  }
+
+  // --- données ----------------------------------------------------------
+  function loadStatus() {
+    return getJSON("status.json").then(function (s) {
+      status = s; cfg = s.config;
+      if (!planesLive && s.planes) setPlanes(s.planes, new Date(s.generated).getTime(), false);
+      updateTicker();
+    });
+  }
+
+  function loadWeather() {
+    if (!cfg) return;
+    var now = nowDate();
+    getJSON("https://api.open-meteo.com/v1/forecast?latitude=" + cfg.weather[0] + "&longitude=" + cfg.weather[1] +
+      "&timezone=Europe%2FParis&timeformat=unixtime&start_date=" + isoDay(now) + "&end_date=" + isoDay(addDays(now, 1)) +
+      "&hourly=precipitation_probability,wind_direction_10m" +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max" +
+      "&current=temperature_2m,weather_code,wind_speed_10m,wind_gusts_10m")
+      .then(function (d) { wx = d; drawWeather(); }).catch(function () {});
+  }
+
+  function loadNews() {
+    var parser = new DOMParser();
+    Promise.all(FEEDS.map(function (f) {
+      return fetch(f.url, { cache: "no-store" }).then(function (r) { return r.text(); }).then(function (txt) {
+        var doc = parser.parseFromString(txt, "text/xml");
+        return Array.prototype.slice.call(doc.querySelectorAll("item")).slice(0, 10).map(function (it) {
+          var t = it.querySelector("title"), d = it.querySelector("pubDate");
+          return { title: t ? t.textContent.trim() : "", date: d ? new Date(d.textContent) : new Date(0), src: f.name };
+        });
+      }).catch(function () { return []; });
+    })).then(function (lists) {
+      var all = [].concat.apply([], lists).filter(function (n) { return n.title; });
+      all.sort(function (a, b) { return b.date - a.date; });
+      if (all.length) { news = all.slice(0, 14); updateTicker(); }
+    });
+  }
+
+  function updateTicker() {
+    var parts = [];
+    var sc = cfg ? sceneOf(nowDate()) : "matin";
+    if (status) (status.alerts || []).forEach(function (a) { parts.push("⚠ TBM : " + a); });
+    if (sc === "weekend") news.slice(0, 8).forEach(function (n) { parts.push(n.src.toUpperCase() + " — " + n.title); });
+    if (status && status.metar) parts.push(status.metar.replace(/\/\/\//g, ""));
+    var txt = parts.join("        ·        ");
+    if ($("tickertext").textContent !== txt) $("tickertext").textContent = txt;
+  }
+
+  // GTFS-RT TBM : petit décodeur protobuf, on ne lit que ce qui sert
+  function varint(b, p) { var r = 0, m = 1, x; do { x = b[p.i++]; r += (x & 127) * m; m *= 128; } while (x & 128); return r; }
+  function fields(b, s, e, cb) {
+    var p = { i: s };
+    while (p.i < e) {
+      var k = varint(b, p), f = Math.floor(k / 8), w = k & 7;
+      if (w === 0) cb(f, 0, varint(b, p));
+      else if (w === 2) { var n = varint(b, p); cb(f, 2, p.i, p.i + n); p.i += n; }
+      else if (w === 1) p.i += 8; else if (w === 5) p.i += 4; else return;
+    }
+  }
+  var td = new TextDecoder();
+  function str(b, s, e) { return td.decode(b.subarray(s, e)); }
+  function decodeRT(buf) {
+    var b = new Uint8Array(buf), out = {};
+    fields(b, 0, b.length, function (f, w, s, e) {
+      if (f !== 2 || w !== 2) return;
+      var tu = null;
+      fields(b, s, e, function (f2, w2, s2, e2) { if (f2 === 3 && w2 === 2) tu = [s2, e2]; });
+      if (!tu) return;
+      var trip = "", route = "", stus = [];
+      fields(b, tu[0], tu[1], function (f3, w3, s3, e3) {
+        if (f3 === 1 && w3 === 2) fields(b, s3, e3, function (f4, w4, s4, e4) {
+          if (f4 === 1 && w4 === 2) trip = str(b, s4, e4); else if (f4 === 5 && w4 === 2) route = str(b, s4, e4);
+        });
+        else if (f3 === 2 && w3 === 2) stus.push([s3, e3]);
+      });
+      if (route !== cfg.route_id) return;
+      var a = null, z = null;
+      stus.forEach(function (u) {
+        var seq = 0, stop = "", arr = 0, dep = 0;
+        fields(b, u[0], u[1], function (f5, w5, s5, e5) {
+          if (f5 === 1 && w5 === 0) seq = s5;
+          else if (f5 === 4 && w5 === 2) stop = str(b, s5, e5);
+          else if ((f5 === 2 || f5 === 3) && w5 === 2) {
+            var t = 0; fields(b, s5, e5, function (f6, w6, v) { if (f6 === 2 && w6 === 0) t = v; });
+            if (f5 === 2) arr = t; else dep = t;
+          }
+        });
+        if (stop === cfg.from_stop) a = { seq: seq, t: dep || arr };
+        if (stop === cfg.to_stop) z = { seq: seq, t: arr || dep };
+      });
+      if (a && z && a.seq < z.seq && a.t && z.t) out[trip] = { dep: a.t * 1000, arr: z.t * 1000 };
+    });
+    return out;
+  }
+  function loadRT() {
+    if (!cfg || sceneOf(nowDate()) !== "matin" || OFFSET) { rt = {}; return; }
+    fetch(cfg.rt_url, { cache: "no-store" }).then(function (r) { return r.arrayBuffer(); })
+      .then(function (buf) { rt = decodeRT(buf); }).catch(function () {});
+  }
+
+  // avions : entre deux relevés on les fait avancer selon leur cap et leur vitesse
+  function setPlanes(list, at, live) {
+    var seen = {};
+    (list || []).forEach(function (p) {
+      var o = planes[p.hex] || { trail: [] };
+      o.p = p; o.at = at; seen[p.hex] = true; planes[p.hex] = o;
+      if (!routes[p.callsign]) lookupRoute(p.callsign);
+    });
+    Object.keys(planes).forEach(function (k) { if (!seen[k]) delete planes[k]; });
+    planesLive = live; planesAt = at;
+  }
+  function loadPlanes() {
+    if (!cfg || sceneOf(nowDate()) === "matin") return;
+    getJSON(PLANES_URL).then(function (d) { if (d.planes) setPlanes(d.planes, Date.now(), d.live !== false); })
+      .catch(function () { planesLive = false; });
+  }
+  function lookupRoute(cs) {
+    routes[cs] = {};
+    getJSON("https://api.adsbdb.com/v0/callsign/" + encodeURIComponent(cs)).then(function (d) {
+      var r = d.response.flightroute;
+      routes[cs] = { airline: r.airline ? r.airline.name : "", from: r.origin.municipality, to: r.destination.municipality,
+                     code: r.origin.iata_code + " – " + r.destination.iata_code };
+    }).catch(function () {});
+  }
+  function nearest() {
+    return Object.keys(planes).map(function (k) { return planes[k].p; }).sort(function (a, b) { return a.dist_km - b.dist_km; });
+  }
+
+  // --- météo ------------------------------------------------------------
+  function iconSVG(code, night) {
+    var st = 'fill="none" stroke="#000" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"';
+    var sun = function (x, y, r) {
+      if (night) return '<path d="M' + (x + r * .3) + ' ' + (y - r) + ' a' + r + ' ' + r + ' 0 1 0 ' + (r * .7) + ' ' + (r * 1.5) +
+        ' a' + (r * .9) + ' ' + (r * .9) + ' 0 0 1 ' + (-r * .7) + ' ' + (-r * 1.5) + 'z" ' + st + '/>';
+      var s = '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" ' + st + '/>';
+      for (var i = 0; i < 8; i++) {
+        var a = i * Math.PI / 4 + Math.PI / 8;
+        s += '<line x1="' + (x + Math.cos(a) * (r + 12)) + '" y1="' + (y + Math.sin(a) * (r + 12)) + '" x2="' +
+          (x + Math.cos(a) * (r + 30)) + '" y2="' + (y + Math.sin(a) * (r + 30)) + '" ' + st + '/>';
+      }
+      return s;
+    };
+    var cloud = '<path d="M52 150 h96 a30 30 0 0 0 0 -60 a44 44 0 0 0 -84 -10 a34 34 0 0 0 -12 70 z" fill="#fff" ' + st.replace('fill="none" ', "") + '/>';
+    if (code <= 1) return sun(100, 100, 40);
+    var s = (code === 2 ? sun(66, 62, 26) : "") + cloud;
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82].indexOf(code) >= 0)
+      for (var i = 0; i < 3; i++) s += '<line x1="' + (78 + i * 26) + '" y1="168" x2="' + (68 + i * 26) + '" y2="190" ' + st + '/>';
+    if (code >= 95) s += '<path d="M104 160 l-14 22 h18 l-10 18" ' + st + '/>';
+    if (code >= 71 && code <= 86 && [80, 81, 82].indexOf(code) < 0) s += '<text x="100" y="196" font-size="44" text-anchor="middle">* * *</text>';
+    return s;
+  }
+  function drawWeather() {
+    if (!wx || !wx.daily) return;
+    var d = wx.daily, c = wx.current, now = nowDate();
+    $("wicon").innerHTML = iconSVG(d.weather_code[0]);
+    $("wtemp").innerHTML = Math.round(d.temperature_2m_max[0]) + "°<small> / " + Math.round(d.temperature_2m_min[0]) + "°</small>";
+    $("wcond").textContent = COND[d.weather_code[0]] || "";
+    $("wsun").textContent = "lever " + hm(new Date(d.sunrise[0] * 1000)) + "   ·   coucher " + hm(new Date(d.sunset[0] * 1000));
+    if (c) {
+      var night = now.getTime() > d.sunset[0] * 1000 || now.getTime() < d.sunrise[0] * 1000;
+      $("nicon").innerHTML = iconSVG(c.weather_code, night);
+      $("ntemp").textContent = Math.round(c.temperature_2m) + "°";
+      $("ncond").textContent = COND[c.weather_code] || "";
+      $("nwind").textContent = "vent " + Math.round(c.wind_speed_10m) + " km/h · rafales " + Math.round(c.wind_gusts_10m);
+    }
+    if (d.time.length > 1) {
+      $("ttemp").innerHTML = Math.round(d.temperature_2m_max[1]) + "°<small> / " + Math.round(d.temperature_2m_min[1]) + "°</small>";
+      $("tcond").textContent = COND[d.weather_code[1]] || "";
+      $("train").textContent = "pluie " + (d.precipitation_probability_max[1] || 0) + " % · lever " + hm(new Date(d.sunrise[1] * 1000));
+    }
+  }
+
+  // graphe de pluie animé : les gouttes tombent, densité = probabilité, pente = vent
+  var cc = $("chart").getContext("2d"), cdrops = [];
+  function drawChart(now) {
+    var W = 964, H = 196, axis = 150, step = W / CHART_HOURS.length;
+    cc.clearRect(0, 0, W, H);
+    if (!wx || !wx.hourly) return;
+    var h = wx.hourly;
+    CHART_HOURS.forEach(function (hr, i) {
+      var idx = -1;
+      for (var j = 0; j < h.time.length; j++) {
+        var t = new Date(h.time[j] * 1000);
+        if (sameDay(t, now) && t.getHours() === hr) { idx = j; break; }
+      }
+      var p = idx >= 0 ? (h.precipitation_probability[idx] || 0) : 0, dir = idx >= 0 ? h.wind_direction_10m[idx] : 270;
+      var col = cdrops[i] || (cdrops[i] = []), want = Math.round(p / 7);
+      while (col.length < want) col.push({ y: Math.random() * (axis - 14), x: Math.random() * (step - 16), v: .5 + Math.random() * .6 });
+      col.length = want;
+      var slant = Math.sin((dir - 180) * Math.PI / 180) * .5, x0 = i * step + 6;
+      cc.strokeStyle = "#000"; cc.lineWidth = 3; cc.beginPath();
+      col.forEach(function (dr) {
+        dr.y += dr.v; if (dr.y > axis - 14) { dr.y = 0; dr.x = Math.random() * (step - 16); }
+        var x = x0 + dr.x + slant * dr.y * .15;
+        cc.moveTo(x, dr.y); cc.lineTo(x + slant * 10, dr.y + 11);
+      });
+      cc.stroke();
+      if (hr === 6 || hr === 7) { cc.fillStyle = "#000"; cc.fillRect(i * step + 2, axis + 3, step - 4, 8); }
+      var cur = now.getHours() === hr;
+      if (cur) { cc.fillStyle = "#000"; cc.fillRect(i * step + 6, axis + 16, step - 12, 32); }
+      cc.fillStyle = cur ? "#fff" : "#000"; cc.font = (cur ? "800 " : "400 ") + "24px Fraunces"; cc.textAlign = "center";
+      cc.fillText(hr, i * step + step / 2, axis + 40);
+    });
+    cc.fillStyle = "#000"; cc.fillRect(0, axis, W, 3);
+  }
+
+  // --- trams ------------------------------------------------------------
+  // trams du jour `day` dans la fenêtre, corrigés par le temps réel ; renvoie {opts, best}
+  function plan(now, day, live) {
+    var c = cfg, walk = c.walk_min * 60000;
+    var lo = atTime(day, c.tram_from).getTime(), hi = atTime(day, c.tram_until).getTime() + 59000;
+    var trams = (status && status.day === isoDay(day) ? status.trams : []).map(function (t) {
+      var r = rt[t.trip_id], dep = new Date(t.dep).getTime(), sched = dep - t.delay_min * 60000;
+      return r ? { id: t.trip_id, dep: r.dep, arr: r.arr, delay: Math.round((r.dep - sched) / 60000), live: true }
+               : { id: t.trip_id, dep: dep, arr: new Date(t.arr).getTime(), delay: t.delay_min, live: t.realtime };
+    });
+    if (live) Object.keys(rt).forEach(function (id) {  // renforts vus seulement en temps réel
+      if (!trams.some(function (t) { return t.id === id; })) trams.push({ id: id, dep: rt[id].dep, arr: rt[id].arr, delay: 0, live: true });
+    });
+    trams.sort(function (a, b) { return a.dep - b.dep; });
+    var win = trams.filter(function (t) { return t.dep >= lo && t.dep <= hi; });
+    var opts = live ? win.filter(function (t) { return t.dep - walk >= now.getTime(); }) : win;
+    var ideal = atTime(day, c.leave_at).getTime(), best = null;
+    for (var i = 0; i < opts.length; i++) if (opts[i].dep - walk >= ideal) { best = opts[i]; break; }
+    return { opts: opts, best: best || opts[0] || null, walk: walk, known: trams.length > 0 };
+  }
+
+  var blink = false;
+  function drawMatin(now) {
+    var c = cfg, p = plan(now, now, true), best = p.best, panel = $("tram");
+    $("tramline").textContent = "tram " + c.route + " · " + c.from_name + " → " + c.to_name;
+    $("tramrt").textContent = Object.keys(rt).length ? "● temps réel TBM" : "horaires théoriques";
+    if (!best) {
+      $("tramlabel").textContent = "aller"; $("countdown").textContent = p.known ? "RATÉ" : "…";
+      $("leave").innerHTML = p.known ? "plus de tram avant<b>" + c.tram_until + "</b>" : "chargement des horaires";
+      $("trams").innerHTML = ""; $("bar").style.width = "0%"; panel.classList.remove("inverse"); return;
+    }
+    var leave = best.dep - p.walk, left = leave - now.getTime(), s = Math.floor(left / 1000), urgent = s < 180;
+    $("tramlabel").textContent = urgent ? "aller · file !" : "aller · pars dans";
+    $("countdown").textContent = s >= 3600 ? Math.floor(s / 3600) + "h" + pad(Math.floor(s / 60) % 60) : Math.floor(s / 60) + ":" + pad(s % 60);
+    $("bar").style.width = Math.max(0, Math.min(100, left / 36000)) + "%";
+    blink = !blink; panel.classList.toggle("inverse", urgent && blink);
+    $("leave").innerHTML = "pars à<b>" + hm(new Date(leave)) + "</b>";
+    var k = p.opts.indexOf(best);
+    $("trams").innerHTML = p.opts.slice(k, k + 3).map(function (t) {
+      var late = t.live && Math.abs(t.delay) >= 1;
+      return '<span class="' + (t === best ? "best" : "") + '">' + hm(new Date(t.dep)) + "</span>" +
+        (late ? ' <span class="late">(' + (t.delay > 0 ? "+" : "") + t.delay + ")</span>" : "") + " → " + hm(new Date(t.arr));
+    }).join("<br>");
+    drawGym(now);
+  }
+
+  function drawGym(day) {
+    var wd = weekday(day), s = cfg.sessions[wd] || "REPOS";
+    $("session").textContent = s; $("muscles").textContent = cfg.muscles[s] || "";
+    var names = ["LUN", "MAR", "MER", "JEU", "VEN"], html = "";
+    for (var i = 0; i < 5; i++) html += '<div class="day' + (i === wd ? " today" : "") + '"><b>' + names[i] + "</b>" + (cfg.sessions[i] || "—").toLowerCase() + "</div>";
+    $("week").innerHTML = html;
+  }
+
+  // --- soir -------------------------------------------------------------
+  function drawSoir(now) {
+    var tmr = addDays(now, 1);
+    if (!workday(tmr)) {
+      $("ndbig").textContent = "WEEK-END"; $("ndline").textContent = "pas de tram demain, pas de réveil";
+    } else {
+      var p = plan(now, tmr, false), s = cfg.sessions[weekday(tmr)];
+      $("ndbig").textContent = p.best ? "pars à " + hm(new Date(p.best.dep - p.walk)) : "pars à " + cfg.leave_at;
+      $("ndline").textContent = (p.best ? "tram " + hm(new Date(p.best.dep)) + " · " : "") + (s ? "séance " + s.toLowerCase() : "");
+    }
+    // actu : un titre en grand qui tourne toutes les 12 s, les suivants en dessous
+    if (news.length) {
+      if (Date.now() - newsAt > 12000) { newsIdx = (newsIdx + 1) % Math.min(news.length, 8); newsAt = Date.now(); showHeadline(); }
+      $("headbar").style.transform = "scaleX(" + Math.min(1, (Date.now() - newsAt) / 12000) + ")";
+    }
+    var list = nearest(), q = list[0];
+    $("near2").textContent = q ? q.callsign + " · " + (routes[q.callsign] && routes[q.callsign].from ? routes[q.callsign].from + " → " + routes[q.callsign].to + " · " : "") +
+      ft(q.alt_ft) + " · " + fr(q.dist_km) + " km" : "ciel vide";
+  }
+  function showHeadline() {
+    var n = news[newsIdx], el = $("headline");
+    el.style.opacity = 0;
+    setTimeout(function () {
+      el.textContent = n.title; el.style.opacity = 1;
+      $("headmeta").textContent = n.src + " · " + hm(n.date);
+      $("newslist").innerHTML = news.slice(0, 8).filter(function (x, i) { return i !== newsIdx; }).slice(0, 3)
+        .map(function (x) { return "<div><b>" + hm(x.date) + "</b>  " + x.title.replace(/</g, "&lt;") + "</div>"; }).join("");
+    }, 600);
+  }
+
+  // --- week-end ---------------------------------------------------------
+  function drawWeekend() {
+    var list = nearest();
+    $("stale").textContent = planesLive || !planesAt ? "● en direct" : "relevé de " + hm(new Date(planesAt));
+    if (!list.length) {
+      $("f1cs").textContent = "CIEL VIDE"; $("f1who").textContent = "aucun avion à moins de " + Math.round(cfg.radius_km) + " km";
+      $("f1route").textContent = ""; $("f1stats").innerHTML = ""; $("others").innerHTML = ""; return;
+    }
+    var p = list[0], r = routes[p.callsign] || {};
+    $("f1cs").textContent = p.callsign;
+    $("f1who").textContent = [r.airline, p.type].filter(Boolean).join(" · ");
+    $("f1route").textContent = r.from ? r.from + " → " + r.to : "";
+    var trend = p.vrate > 300 ? " ↗" : p.vrate < -300 ? " ↘" : "";
+    $("f1stats").innerHTML = [[ft(p.alt_ft) + trend, "ALTITUDE"], [Math.round(p.gs_kt * 1.852) + " km/h", "VITESSE"],
+      [fr(p.dist_km) + " km", "DISTANCE"]].map(function (s) { return "<div>" + s[0] + "<span>" + s[1] + "</span></div>"; }).join("");
+    $("others").innerHTML = list.slice(1, 6).map(function (q) {
+      var rr = routes[q.callsign] || {};
+      return "<b>" + q.callsign + "</b> " + (rr.code || q.type) + " · " + ft(q.alt_ft);
+    }).join("<br>");
+  }
+
+  // --- radar ------------------------------------------------------------
+  var sweep = 0;
+  function xy(lat, lon) {
+    var h = cfg.home;
+    return [(lon - h[1]) * 111.32 * Math.cos(h[0] * Math.PI / 180), (lat - h[0]) * 111.32];
+  }
+  function drawRadar(canvas, now) {
+    var rc = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
+    var small = canvas.id === "radar2";  // le soir, place pour une ligne de texte en dessous
+    var cx = W / 2, cy = small ? H / 2 - 4 : H / 2 + 6, R = small ? 146 : 168, k = R / cfg.radius_km;
+    rc.clearRect(0, 0, W, H);
+    rc.fillStyle = "#000"; rc.font = "800 20px Fraunces"; rc.textAlign = "left";
+    rc.fillText("RADAR · " + Math.round(cfg.radius_km) + " KM", 28, 40);
+    for (var i = 0; i < 24; i++) {  // traîne du balayage
+      rc.fillStyle = "rgba(0,0,0," + (0.10 * (1 - i / 24)) + ")";
+      rc.beginPath(); rc.moveTo(cx, cy); rc.arc(cx, cy, R, sweep - (i + 1) * .03, sweep - i * .03); rc.closePath(); rc.fill();
+    }
+    rc.strokeStyle = "#000"; rc.lineWidth = 2;
+    [1 / 6, 1 / 2, 1].forEach(function (f) { rc.beginPath(); rc.arc(cx, cy, R * f, 0, 7); rc.stroke(); });
+    rc.beginPath(); rc.moveTo(cx, cy); rc.lineTo(cx + Math.cos(sweep) * R, cy + Math.sin(sweep) * R); rc.stroke();
+    var a = xy(44.8283, -0.7156);
+    rc.lineWidth = 6;
+    [[49, 3.1], [107, 2.4]].forEach(function (r) {
+      var t = r[0] * Math.PI / 180, dx = Math.sin(t) * r[1] / 2, dy = Math.cos(t) * r[1] / 2;
+      rc.beginPath(); rc.moveTo(cx + (a[0] - dx) * k, cy - (a[1] - dy) * k); rc.lineTo(cx + (a[0] + dx) * k, cy - (a[1] + dy) * k); rc.stroke();
+    });
+    rc.font = "800 15px Fraunces"; rc.textAlign = "center"; rc.fillText("LFBD", cx + a[0] * k, cy - a[1] * k + 24);
+    rc.fillRect(cx - 6, cy - 6, 12, 12);  // maison
+    Object.keys(planes).forEach(function (hex) {
+      var o = planes[hex], p = o.p, dt = Math.min(90, (now - o.at) / 1000);
+      var pos = xy(p.lat, p.lon), t = p.track * Math.PI / 180, d = p.gs_kt * 1.852 / 3600 * dt;
+      var x = cx + (pos[0] + Math.sin(t) * d) * k, y = cy - (pos[1] + Math.cos(t) * d) * k;
+      if (Math.hypot(x - cx, y - cy) > R + 4) return;
+      var tr = o[canvas.id] || (o[canvas.id] = []), last = tr[tr.length - 1];
+      if (!last || Math.hypot(last[0] - x, last[1] - y) > 2) { tr.push([x, y]); if (tr.length > 40) tr.shift(); }
+      rc.strokeStyle = "rgba(0,0,0,.35)"; rc.lineWidth = 2; rc.setLineDash([3, 4]); rc.beginPath();
+      tr.forEach(function (q, i) { if (i) rc.lineTo(q[0], q[1]); else rc.moveTo(q[0], q[1]); }); rc.stroke(); rc.setLineDash([]);
+      rc.save(); rc.translate(x, y); rc.rotate(t); rc.fillStyle = "#000";
+      rc.beginPath(); rc.moveTo(0, -13); rc.lineTo(10, 11); rc.lineTo(0, 5); rc.lineTo(-10, 11); rc.closePath(); rc.fill();
+      rc.restore();
+      rc.textAlign = "left"; rc.font = "800 15px Fraunces"; rc.fillText(p.callsign, x + 13, y - 8);
+    });
+  }
+
+  // --- boucles ----------------------------------------------------------
+  var current = "";
+  var SCENES = { matin: "le matin", soir: "le soir", weekend: "le week-end" };
+  function tick() {
+    var now = nowDate();
+    $("hm").textContent = hm(now); $("ss").textContent = pad(now.getSeconds());
+    if (!cfg) return;
+    var sc = sceneOf(now);
+    $("dayname").textContent = JOURS[now.getDay()];
+    $("date").textContent = now.getDate() + " " + MOIS[now.getMonth()] + (status ? " · données " + hm(new Date(status.generated)) : "");
+    if (sc !== current) {
+      current = sc; cdrops = [];
+      $("matin").classList.toggle("hidden", sc !== "matin");
+      $("soir").classList.toggle("hidden", sc !== "soir");
+      $("weekend").classList.toggle("hidden", sc !== "weekend");
+      $("wrow").classList.toggle("hidden", sc === "soir");
+      $("scene").textContent = SCENES[sc];
+      loadWeather(); loadRT(); loadPlanes(); updateTicker();
+      if (sc === "soir" && news.length) showHeadline();
+    }
+    if (sc === "matin") drawMatin(now);
+    else if (sc === "soir") drawSoir(now);
+    else drawWeekend();
+  }
+  function frame() {
+    if (cfg) {
+      sweep = (sweep + 0.025) % (Math.PI * 2);
+      if (current !== "soir") drawChart(nowDate());
+      if (current === "weekend") drawRadar($("radar"), Date.now());
+      if (current === "soir") { drawRadar($("radar2"), Date.now()); $("headbar").style.transform = "scaleX(" + Math.min(1, (Date.now() - newsAt) / 12000) + ")"; }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // radio : la télé bloque le son tant qu'on n'a pas appuyé sur une touche
+  var audio = $("audio"), st = 0;
+  try { st = (+localStorage.getItem("station") || 0) % STATIONS.length; } catch (e) {}
+  function play() {
+    audio.src = STATIONS[st].url;
+    audio.play().then(function () { $("radio").classList.add("on"); $("hint").textContent = "OK : pause · ◀ ▶ : station"; })
+      .catch(function () { $("radio").classList.remove("on"); $("hint").textContent = "appuie sur OK pour la radio"; });
+  }
+  function station(i) {
+    st = (i + STATIONS.length) % STATIONS.length; $("station").textContent = STATIONS[st].name;
+    try { localStorage.setItem("station", st); } catch (e) {}
+    if ($("radio").classList.contains("on")) play();
+  }
+  function toggle() { if (audio.paused) play(); else { audio.pause(); audio.removeAttribute("src"); $("radio").classList.remove("on"); } }
+  audio.addEventListener("error", function () { if ($("radio").classList.contains("on")) setTimeout(play, 5000); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.keyCode === 13 || e.keyCode === 10252) toggle();
+    else if (e.key === "ArrowRight" || e.keyCode === 39) station(st + 1);
+    else if (e.key === "ArrowLeft" || e.keyCode === 37) station(st - 1);
+  });
+  document.addEventListener("click", toggle);
+  $("station").textContent = STATIONS[st].name;
+  if (params.get("radio") !== "0") play();
+
+  function boot() {  // réessaie toutes les 10 s tant que status.json n'est pas arrivé
+    loadStatus().then(function () { tick(); loadNews(); }).catch(function () { setTimeout(boot, 10000); });
+  }
+  boot();
+  setInterval(tick, 1000);
+  setInterval(function () { loadStatus().catch(function () {}); }, 60000);
+  setInterval(loadWeather, 15 * 60000);
+  setInterval(function () { if (!wx) loadWeather(); }, 20000);
+  setInterval(loadNews, 3 * 60000);
+  setInterval(loadRT, 30000);
+  setInterval(loadPlanes, 5000);
+  setTimeout(function () { location.reload(); }, 6 * 3600000);  // au cas où le navigateur de la télé se fige
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

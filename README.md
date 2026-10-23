@@ -81,12 +81,15 @@ en mode direct) : une page plein écran en noir et blanc, animée à la seconde,
   partir, trams en temps réel (lus directement chez TBM), séance du jour, pluie heure par heure ;
 - **le soir** (semaine, le reste de la journée) : météo de ce soir et de demain, heure de départ
   de demain, actu en direct de toutes les rubriques (franceinfo, Sud Ouest Bordeaux, Air Journal),
-  radar des avions ;
-- **le week-end** : la même base, avec à la place du radar la fiche de l'avion le plus proche
-  (photo planespotters.net ou schéma orienté selon son cap, compagnie, modèle, route, altitude,
-  vitesse, cap, vario, distance, transpondeur, mis à jour en continu).
+  et la fiche de l'avion le plus proche (photo planespotters.net ou schéma orienté selon son cap,
+  compagnie, modèle, route, altitude, vitesse, cap, vario, distance, transpondeur, en continu) ;
+- **le week-end** : la même chose, avec la météo du moment.
 
-Radio en bas à droite (Lofi, Nightwave Plaza, Yumi Co. Radio) : **OK** sur la télécommande pour
+Avant le lever et après le coucher du soleil, l'écran se teinte progressivement d'orange
+(lumière chaude, `WARM_MAX` dans `tv.html`).
+
+Radio en bas à droite (Lofi, Nightwave Plaza, Yumi Co. Radio, Rainwave Chill et Gamesboro
+pour les musiques de jeux vidéo) : **OK** sur la télécommande pour
 lancer / couper, **◀ ▶** pour changer. Les positions d'avions sont en direct avec le serveur
 maison ; sur GitHub Pages elles datent du dernier passage (10 min) et sont extrapolées.
 `image.html` affiche simplement l'image de l'écran e-ink.

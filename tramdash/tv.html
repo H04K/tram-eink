@@ -15,6 +15,9 @@
   .label { font-size: 26px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
   .num { font-variant-numeric: tabular-nums; }
   .hidden { display: none !important; }
+  /* lumière chaude : un voile orange qui teinte le blanc tôt le matin et le soir */
+  #warm { position: fixed; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none;
+    background: #ff9a3c; mix-blend-mode: multiply; opacity: 0; transition: opacity 60s linear; }
   .panel { background: #000; color: #fff; }
   .panel > .label { position: absolute; left: 34px; top: 26px; }
 
@@ -58,7 +61,7 @@
   .day b { display: block; font-size: 16px; letter-spacing: .1em; font-weight: 800; }
   .day.today { background: #fff; color: #000; }
 
-  /* soir : ce soir / demain / actu / radar */
+  /* soir et week-end : ce soir / demain / actu */
   #tonight { left: 56px; top: 262px; width: 560px; height: 228px; }
   #tonight svg { left: 0; top: 10px; width: 150px; height: 150px; }
   #ntemp { left: 176px; top: 0; font-size: 120px; font-weight: 800; line-height: 1; }
@@ -83,16 +86,13 @@
   #headbar { left: 0; right: 0; top: 296px; height: 4px; background: #000; transform-origin: left; }
   #newslist { left: 0; right: 0; top: 314px; font-size: 24px; line-height: 1.45; }
   #newslist div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #radar2box { left: 1210px; top: 514px; width: 654px; height: 400px; box-shadow: inset 0 0 0 5px #000; }
-  #near2 { left: 26px; right: 26px; bottom: 16px; font-size: 22px; font-weight: 600; text-align: center; }
 
-  /* week-end : base du soir, la fiche de l'avion à la place du radar */
-  .we #radar2box { display: none; }
-  .we #news { width: 844px; }
-  .we #headline { font-size: 44px; height: 160px; }
-  .we #headmeta { top: 228px; }
-  .we #headbar { top: 262px; }
-  .we #newslist { top: 280px; font-size: 22px; }
+  /* soir et week-end : fiche de l'avion le plus proche */
+  #news { width: 844px; }
+  #headline { font-size: 44px; height: 160px; }
+  #headmeta { top: 228px; }
+  #headbar { top: 262px; }
+  #newslist { top: 280px; font-size: 22px; }
   #plane { left: 930px; top: 514px; width: 934px; height: 400px; }
   #photo { left: 24px; top: 24px; width: 400px; height: 225px; background: #1a1a1a; overflow: hidden; }
   #pimg { display: block; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.08); }
@@ -191,12 +191,10 @@
       <div id="headbar" class="abs"></div>
       <div id="newslist" class="abs"></div>
     </section>
-    <section id="radar2box" class="abs"><canvas id="radar2" class="abs" width="654" height="400"></canvas>
-      <div id="near2" class="abs"></div></section>
   </div>
 
-  <!-- WEEK-END : la base du soir + cette fiche -->
-  <div id="weekend" class="hidden">
+  <!-- soir et week-end : fiche de l'avion le plus proche -->
+  <div id="planecard" class="hidden">
     <section id="plane" class="abs panel">
       <div id="photo" class="abs"><img id="pimg" alt=""><svg id="pschema" viewBox="-100 -100 200 200"></svg></div>
       <div id="pcredit" class="abs"></div>
@@ -218,6 +216,7 @@
     <div id="eq" class="abs"><i></i><i></i><i></i><i></i><i></i></div>
   </section>
 </div>
+<div id="warm"></div>
 <audio id="audio" preload="none"></audio>
 
 <script>
@@ -233,7 +232,9 @@
   var STATIONS = [
     { name: "Lofi · laut.fm", url: "https://stream.laut.fm/lofi" },
     { name: "Nightwave Plaza", url: "https://radio.plaza.one/mp3" },
-    { name: "Yumi Co. Radio", url: "https://yumicoradio.net/stream" }
+    { name: "Yumi Co. Radio", url: "https://yumicoradio.net/stream" },
+    { name: "Rainwave Chill · jeux vidéo", url: "https://relay.rainwave.cc/chill.mp3" },
+    { name: "Gamesboro · musiques de jeux", url: "https://radio.gamesboro.org/listen/gamesboro_radio/radio.mp3" }
   ];
   // une rubrique par flux ; l'aviation (pas lisible depuis un navigateur) arrive par status.json
   var FI = "https://www.franceinfo.fr/";
@@ -329,7 +330,7 @@
     var parts = [];
     var sc = cfg ? sceneOf(nowDate()) : "matin";
     if (status) (status.alerts || []).forEach(function (a) { parts.push("⚠ TBM : " + a); });
-    if (sc === "weekend") others.forEach(function (o) { parts.push(o); });
+    if (sc !== "matin") others.forEach(function (o) { parts.push(o); });
     if (status && status.metar) parts.push(status.metar.replace(/\/\/\//g, ""));
     var txt = parts.join("        ·        ");
     if ($("tickertext").textContent !== txt) $("tickertext").textContent = txt;
@@ -410,9 +411,6 @@
       routes[cs] = { airline: r.airline ? r.airline.name : "", from: r.origin.municipality, to: r.destination.municipality,
                      code: r.origin.iata_code + " – " + r.destination.iata_code };
     }).catch(function () {});
-  }
-  function nearest() {
-    return Object.keys(planes).map(function (k) { return planes[k].p; }).sort(function (a, b) { return a.dist_km - b.dist_km; });
   }
 
   // --- météo ------------------------------------------------------------
@@ -562,9 +560,6 @@
       if (Date.now() - newsAt > 12000) { newsIdx = (newsIdx + 1) % Math.min(news.length, 20); newsAt = Date.now(); showHeadline(); }
       $("headbar").style.transform = "scaleX(" + Math.min(1, (Date.now() - newsAt) / 12000) + ")";
     }
-    var list = nearest(), q = list[0];
-    $("near2").textContent = q ? q.callsign + " · " + (routes[q.callsign] && routes[q.callsign].from ? routes[q.callsign].from + " → " + routes[q.callsign].to + " · " : "") +
-      ft(Math.max(0, q.alt_ft)) + " · " + fr(q.dist_km) + " km" : "ciel vide";
   }
   function showHeadline() {
     var n = news[newsIdx], el = $("headline");
@@ -578,7 +573,7 @@
     }, 600);
   }
 
-  // --- week-end : fiche de l'avion le plus proche ----------------------
+  // --- fiche de l'avion le plus proche (soir et week-end) -------------
   var DIRS = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
   var aircraft = {}, photos = {}, shownHex = "";
   function compass(deg) { return DIRS[Math.round(((deg % 360) + 360) % 360 / 45) % 8]; }
@@ -611,7 +606,7 @@
     return '<circle r="96" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>' +
       '<text y="-80" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="11" font-weight="800">N</text>' + g;
   }
-  function drawWeekend() {
+  function drawPlane() {
     var now = Date.now();
     var list = Object.keys(planes).map(function (k) { var o = planes[k]; return { o: o, s: liveState(o, now) }; })
       .sort(function (a, b) { return a.s.dist - b.s.dist; });
@@ -652,48 +647,21 @@
     if (o2.join() !== others.join()) { others = o2; updateTicker(); }
   }
 
-  // --- radar ------------------------------------------------------------
-  var sweep = 0;
-  function xy(lat, lon) {
+  function xy(lat, lon) {  // km est / nord depuis la maison
     var h = cfg.home;
     return [(lon - h[1]) * 111.32 * Math.cos(h[0] * Math.PI / 180), (lat - h[0]) * 111.32];
   }
-  function drawRadar(canvas, now) {
-    var rc = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
-    var cx = W / 2, cy = H / 2 - 4, R = 146;  // une ligne de texte en dessous
-    var k = R / cfg.radius_km;
-    rc.clearRect(0, 0, W, H);
-    rc.fillStyle = "#000"; rc.font = "800 20px Fraunces"; rc.textAlign = "left";
-    rc.fillText("RADAR · " + Math.round(cfg.radius_km) + " KM", 28, 40);
-    for (var i = 0; i < 24; i++) {  // traîne du balayage
-      rc.fillStyle = "rgba(0,0,0," + (0.10 * (1 - i / 24)) + ")";
-      rc.beginPath(); rc.moveTo(cx, cy); rc.arc(cx, cy, R, sweep - (i + 1) * .03, sweep - i * .03); rc.closePath(); rc.fill();
-    }
-    rc.strokeStyle = "#000"; rc.lineWidth = 2;
-    [1 / 6, 1 / 2, 1].forEach(function (f) { rc.beginPath(); rc.arc(cx, cy, R * f, 0, 7); rc.stroke(); });
-    rc.beginPath(); rc.moveTo(cx, cy); rc.lineTo(cx + Math.cos(sweep) * R, cy + Math.sin(sweep) * R); rc.stroke();
-    var a = xy(44.8283, -0.7156);
-    rc.lineWidth = 6;
-    [[49, 3.1], [107, 2.4]].forEach(function (r) {
-      var t = r[0] * Math.PI / 180, dx = Math.sin(t) * r[1] / 2, dy = Math.cos(t) * r[1] / 2;
-      rc.beginPath(); rc.moveTo(cx + (a[0] - dx) * k, cy - (a[1] - dy) * k); rc.lineTo(cx + (a[0] + dx) * k, cy - (a[1] + dy) * k); rc.stroke();
-    });
-    rc.font = "800 15px Fraunces"; rc.textAlign = "center"; rc.fillText("LFBD", cx + a[0] * k, cy - a[1] * k + 24);
-    rc.fillRect(cx - 6, cy - 6, 12, 12);  // maison
-    Object.keys(planes).forEach(function (hex) {
-      var o = planes[hex], p = o.p, dt = Math.min(90, (now - o.at) / 1000);
-      var pos = xy(p.lat, p.lon), t = p.track * Math.PI / 180, d = p.gs_kt * 1.852 / 3600 * dt;
-      var x = cx + (pos[0] + Math.sin(t) * d) * k, y = cy - (pos[1] + Math.cos(t) * d) * k;
-      if (Math.hypot(x - cx, y - cy) > R + 4) return;
-      var tr = o[canvas.id] || (o[canvas.id] = []), last = tr[tr.length - 1];
-      if (!last || Math.hypot(last[0] - x, last[1] - y) > 2) { tr.push([x, y]); if (tr.length > 40) tr.shift(); }
-      rc.strokeStyle = "rgba(0,0,0,.35)"; rc.lineWidth = 2; rc.setLineDash([3, 4]); rc.beginPath();
-      tr.forEach(function (q, i) { if (i) rc.lineTo(q[0], q[1]); else rc.moveTo(q[0], q[1]); }); rc.stroke(); rc.setLineDash([]);
-      rc.save(); rc.translate(x, y); rc.rotate(t); rc.fillStyle = "#000";
-      rc.beginPath(); rc.moveTo(0, -13); rc.lineTo(10, 11); rc.lineTo(0, 5); rc.lineTo(-10, 11); rc.closePath(); rc.fill();
-      rc.restore();
-      rc.textAlign = "left"; rc.font = "800 15px Fraunces"; rc.fillText(p.callsign, x + 13, y - 8);
-    });
+
+  // --- lumière chaude : avant le lever et après le coucher du soleil ---
+  var WARM_MAX = 0.42;
+  function warmth(now) {
+    var d = wx && wx.daily && sameDay(new Date(wx.daily.sunrise[0] * 1000), now) ? wx.daily : null;
+    var rise = d ? d.sunrise[0] * 1000 : atTime(now, "07:30").getTime();
+    var set = d ? d.sunset[0] * 1000 : atTime(now, "18:30").getTime();
+    var t = now.getTime(), H = 3600000;
+    var morning = (rise + H / 2 - t) / (1.5 * H);   // plein jusqu'à 1 h avant le lever, rien 30 min après
+    var evening = (t - (set - H / 2)) / (2 * H);    // commence 30 min avant le coucher, plein 1 h 30 après
+    return WARM_MAX * Math.max(0, Math.min(1, Math.max(morning, evening)));
   }
 
   // --- boucles ----------------------------------------------------------
@@ -702,6 +670,7 @@
   function tick() {
     var now = nowDate();
     $("hm").textContent = hm(now); $("ss").textContent = pad(now.getSeconds());
+    $("warm").style.opacity = warmth(now).toFixed(3);
     if (!cfg) return;
     var sc = sceneOf(now);
     $("dayname").textContent = JOURS[now.getDay()];
@@ -710,22 +679,19 @@
       current = sc; cdrops = [];
       $("matin").classList.toggle("hidden", sc !== "matin");
       $("soir").classList.toggle("hidden", sc === "matin");
-      $("weekend").classList.toggle("hidden", sc !== "weekend");
+      $("planecard").classList.toggle("hidden", sc === "matin");
       $("wrow").classList.toggle("hidden", sc !== "matin");
-      $("stage").classList.toggle("we", sc === "weekend");
       $("nowlabel").textContent = sc === "weekend" ? "maintenant" : "ce soir";
       $("scene").textContent = SCENES[sc];
       loadWeather(); loadRT(); loadPlanes(); updateTicker();
       if (sc !== "matin" && news.length) showHeadline();
     }
     if (sc === "matin") drawMatin(now);
-    else { drawSoir(now); if (sc === "weekend") drawWeekend(); }
+    else { drawSoir(now); drawPlane(); }
   }
   function frame() {
     if (cfg) {
-      sweep = (sweep + 0.025) % (Math.PI * 2);
       if (current === "matin") drawChart(nowDate());
-      if (current === "soir") drawRadar($("radar2"), Date.now());
       if (current !== "matin") $("headbar").style.transform = "scaleX(" + Math.min(1, (Date.now() - newsAt) / 12000) + ")";
     }
     requestAnimationFrame(frame);

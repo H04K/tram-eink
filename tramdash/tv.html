@@ -94,18 +94,27 @@
   #headbar { top: 262px; }
   #newslist { top: 280px; font-size: 22px; }
   #plane { left: 930px; top: 514px; width: 934px; height: 400px; }
-  #photo { left: 24px; top: 24px; width: 400px; height: 225px; background: #1a1a1a; overflow: hidden; }
-  #pimg { display: block; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.08); }
-  #pschema { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-  #pcredit { left: 24px; top: 256px; width: 400px; font-size: 14px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #pinfo { left: 452px; top: 22px; right: 24px; }
-  #plabel { display: flex; justify-content: space-between; font-size: 18px; }
-  #pcs { font-size: 72px; font-weight: 900; line-height: 1; margin-top: 10px; }
-  #pwho { font-size: 22px; font-weight: 600; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #proute { font-size: 28px; font-weight: 800; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #pstats { left: 24px; right: 24px; top: 290px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 20px; }
-  .st b { display: block; font-size: 30px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
-  .st span { font-size: 13px; letter-spacing: .12em; font-weight: 600; }
+  /* style panneau d'embarquement : lettres à palettes + tableau des vols */
+  #mini { left: 20px; top: 16px; }
+  #plabel { left: 262px; top: 22px; right: 24px; display: flex; justify-content: space-between; font-size: 17px; }
+  .flaps span { display: inline-block; position: relative; text-align: center; margin-right: 4px; border-radius: 4px;
+    background: #242424; color: #fff; font-family: "IBM Plex Mono", monospace; font-weight: 500; }
+  .flaps span::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #000; }
+  .flaps span.flip { animation: flip .4s ease-out; }
+  @keyframes flip { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
+  #pcs { left: 262px; top: 54px; }
+  #pcs span { width: 56px; height: 76px; line-height: 76px; font-size: 54px; }
+  #proute { left: 262px; top: 142px; }
+  #proute span { width: 30px; height: 42px; line-height: 42px; font-size: 28px; }
+  #pwho { left: 262px; top: 192px; right: 24px; font-size: 19px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #board { left: 20px; right: 20px; top: 226px; font-family: "IBM Plex Mono", monospace; }
+  #board .row { display: grid; grid-template-columns: 1.4fr .65fr .65fr 1.1fr 1.25fr 1.15fr .75fr 1.1fr;
+    align-items: center; height: 36px; padding: 0 10px; font-size: 22px; white-space: nowrap; overflow: hidden;
+    border-top: 1px solid #333; }
+  #board .row span { overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
+  #board .row.head { height: 22px; font-size: 13px; letter-spacing: .12em; opacity: .7; border-top: 0; }
+  #board .row.first { background: #fff; color: #000; font-weight: 500; }
 
   /* bas : bandeau + radio */
   #ticker { left: 56px; top: 946px; width: 1220px; height: 90px; overflow: hidden; border-top: 3px solid #000; }
@@ -196,15 +205,12 @@
   <!-- soir et week-end : fiche de l'avion le plus proche -->
   <div id="planecard" class="hidden">
     <section id="plane" class="abs panel">
-      <div id="photo" class="abs"><img id="pimg" alt=""><svg id="pschema" viewBox="-100 -100 200 200"></svg></div>
-      <div id="pcredit" class="abs"></div>
-      <div id="pinfo" class="abs">
-        <div id="plabel" class="label"><span>au-dessus de chez toi</span><span id="stale"></span></div>
-        <div id="pcs"></div>
-        <div id="pwho"></div>
-        <div id="proute"></div>
-      </div>
-      <div id="pstats" class="abs"></div>
+      <canvas id="mini" class="abs" width="220" height="196"></canvas>
+      <div id="plabel" class="abs label"><span>au-dessus de chez toi</span><span id="stale"></span></div>
+      <div id="pcs" class="abs flaps"></div>
+      <div id="proute" class="abs flaps"></div>
+      <div id="pwho" class="abs"></div>
+      <div id="board" class="abs"></div>
     </section>
   </div>
 
@@ -248,10 +254,13 @@
   var EVENING_HOUR = 16;   // à partir de 16 h en semaine : écran du soir
   var CHART_HOURS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
   var params = new URLSearchParams(location.search);
-  var PLANES_URL = params.get("planes") || "planes.json";
+  // avions : ?adsb=<relais Cloudflare> (ou config.adsb_relay) -> lu chaque seconde ;
+  // sinon planes.json (serveur maison, 1 s) ; sinon le relevé de status.json (GitHub, 10 min)
+  var ADSB = params.get("adsb");
   // ?now=2026-10-26T06:20 : simuler une autre heure (pour tester)
   var OFFSET = params.get("now") ? new Date(params.get("now")).getTime() - Date.now() : 0;
   function nowDate() { return new Date(Date.now() + OFFSET); }
+  if (OFFSET) document.addEventListener("DOMContentLoaded", function () { $("warm").style.transition = "none"; });
 
   var status = null, cfg = null, wx = null, rt = {}, planes = {}, planesLive = false, planesAt = 0, routes = {};
   var news = [], newsIdx = 0, newsAt = 0, others = [];
@@ -393,16 +402,35 @@
     var seen = {};
     (list || []).forEach(function (p) {
       var o = planes[p.hex] || { trail: [] };
-      o.p = p; o.at = at; seen[p.hex] = true; planes[p.hex] = o;
+      o.p = p; o.at = at - (p.seen || 0) * 1000; seen[p.hex] = true; planes[p.hex] = o;
       if (!routes[p.callsign]) lookupRoute(p.callsign);
     });
     Object.keys(planes).forEach(function (k) { if (!seen[k]) delete planes[k]; });
     planesLive = live; planesAt = at;
   }
+  var planesBusy = false;
   function loadPlanes() {
-    if (!cfg || sceneOf(nowDate()) === "matin") return;
-    getJSON(PLANES_URL).then(function (d) { if (d.planes) setPlanes(d.planes, Date.now(), d.live !== false); })
-      .catch(function () { planesLive = false; });
+    if (!cfg || planesBusy || sceneOf(nowDate()) === "matin") return;
+    var relay = ADSB || cfg.adsb_relay, url = relay ?
+      relay.replace(/\/$/, "") + "/v2/point/" + cfg.home[0] + "/" + cfg.home[1] + "/" + Math.ceil(cfg.radius_km / 1.852 + 1) :
+      "planes.json";
+    planesBusy = true;
+    getJSON(url).then(function (d) {
+      if (d.ac) setPlanes(fromADSB(d.ac), Date.now(), true);
+      else if (d.planes) setPlanes(d.planes, Date.now(), d.live !== false);
+    }).catch(function () { planesLive = false; }).then(function () { planesBusy = false; });
+  }
+  // réponse brute d'adsb.lol (via le relais) -> même forme que status.json
+  function fromADSB(ac) {
+    return ac.filter(function (a) {
+      return "lat" in a && a.alt_baro !== undefined && a.alt_baro !== "ground" && !(a.alt_baro < 100 && (a.gs || 0) < 60);
+    }).map(function (a) {
+      var pos = xy(a.lat, a.lon);
+      return { hex: a.hex, callsign: (a.flight || a.r || a.hex).trim(), type: a.t || "?", alt_ft: a.alt_baro,
+        gs_kt: a.gs || 0, track: a.track || 0, lat: a.lat, lon: a.lon, dist_km: Math.hypot(pos[0], pos[1]),
+        vrate: a.baro_rate || 0, reg: a.r || "", squawk: a.squawk || "", icao_type: a.t || "",
+        seen: a.seen_pos || 0 };
+    }).filter(function (p) { return p.dist_km <= cfg.radius_km; });
   }
   function lookupRoute(cs) {
     routes[cs] = {};
@@ -575,14 +603,55 @@
 
   // --- fiche de l'avion le plus proche (soir et week-end) -------------
   var DIRS = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
-  var aircraft = {}, photos = {}, shownHex = "";
+  var aircraft = {}, topHex = "", zoom = 20;
+
+  // minimap : maison au centre, N S E O, l'avion avance à chaque image, zoom selon sa distance
+  function drawMini(now) {
+    var c = $("mini"), g = c.getContext("2d"), W = c.width, H = c.height, cx = W / 2, cy = H / 2 - 6, R = 82;
+    g.clearRect(0, 0, W, H);
+    var top = planes[topHex], ts = top ? liveState(top, now) : null;
+    var want = ts ? Math.min(cfg.radius_km, Math.max(4, ts.dist * 1.4)) : cfg.radius_km;
+    zoom += (want - zoom) * 0.03;
+    var k = R / zoom;
+    g.strokeStyle = "rgba(255,255,255,.9)"; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, R, 0, 7); g.stroke();
+    g.strokeStyle = "rgba(255,255,255,.3)"; g.setLineDash([4, 5]); g.beginPath(); g.arc(cx, cy, R / 2, 0, 7); g.stroke();
+    g.beginPath(); g.moveTo(cx - R, cy); g.lineTo(cx + R, cy); g.moveTo(cx, cy - R); g.lineTo(cx, cy + R); g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = "#fff"; g.font = "800 14px Fraunces"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText("N", cx, cy - R - 0 + 12); g.fillText("S", cx, cy + R - 12);
+    g.fillText("E", cx + R - 12, cy); g.fillText("O", cx - R + 12, cy);
+    g.font = "500 12px Fraunces"; g.textAlign = "left"; g.textBaseline = "alphabetic";
+    g.fillText("rayon " + Math.round(zoom) + " km", 4, H - 4);
+    var a = xy(44.8283, -0.7156);  // pistes de Mérignac
+    if (Math.hypot(a[0], a[1]) < zoom) {
+      g.strokeStyle = "rgba(255,255,255,.6)"; g.lineWidth = 3;
+      [[49, 3.1], [107, 2.4]].forEach(function (r) {
+        var t = r[0] * Math.PI / 180, dx = Math.sin(t) * r[1] / 2, dy = Math.cos(t) * r[1] / 2;
+        g.beginPath(); g.moveTo(cx + (a[0] - dx) * k, cy - (a[1] - dy) * k); g.lineTo(cx + (a[0] + dx) * k, cy - (a[1] + dy) * k); g.stroke();
+      });
+    }
+    g.fillRect(cx - 3, cy - 3, 6, 6);  // maison
+    Object.keys(planes).forEach(function (hex) {
+      if (hex === topHex) return;
+      var s = liveState(planes[hex], now);
+      if (s.dist > zoom) return;
+      g.beginPath(); g.arc(cx + s.x * k, cy - s.y * k, 2.5, 0, 7); g.fill();
+    });
+    if (!ts || ts.dist > zoom * 1.05) return;
+    var x = cx + ts.x * k, y = cy - ts.y * k, tr = top.mini || (top.mini = []), last = tr[tr.length - 1];
+    if (!last || Math.hypot(last[0] - x, last[1] - y) > 1.5) { tr.push([x, y]); if (tr.length > 80) tr.shift(); }
+    g.strokeStyle = "rgba(255,255,255,.5)"; g.lineWidth = 2; g.setLineDash([2, 3]); g.beginPath();
+    tr.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.stroke(); g.setLineDash([]);
+    g.save(); g.translate(x, y); g.rotate(top.p.track * Math.PI / 180);
+    g.beginPath(); g.moveTo(0, -10); g.lineTo(8, 8); g.lineTo(0, 4); g.lineTo(-8, 8); g.closePath(); g.fill(); g.restore();
+  }
   function compass(deg) { return DIRS[Math.round(((deg % 360) + 360) % 360 / 45) % 8]; }
   // position, distance et altitude estimées maintenant à partir du dernier relevé
   function liveState(o, now) {
-    var p = o.p, dt = Math.min(90, (now - o.at) / 1000), t = p.track * Math.PI / 180;
+    var p = o.p, dt = Math.max(0, Math.min(90, (now - o.at) / 1000)), t = p.track * Math.PI / 180;
     var d = p.gs_kt * 1.852 / 3600 * dt, pos = xy(p.lat, p.lon);
     var x = pos[0] + Math.sin(t) * d, y = pos[1] + Math.cos(t) * d;
-    return { dist: Math.hypot(x, y), brg: (Math.atan2(x, y) * 180 / Math.PI + 360) % 360,
+    return { x: x, y: y, dist: Math.hypot(x, y), brg: (Math.atan2(x, y) * 180 / Math.PI + 360) % 360,
              alt: Math.max(0, Math.round(p.alt_ft + p.vrate * dt / 60)) };
   }
   function lookupAircraft(hex) {
@@ -591,56 +660,47 @@
       var a = d.response.aircraft;
       aircraft[hex] = { model: a.manufacturer + " " + a.type, reg: a.registration, owner: a.registered_owner };
     }).catch(function () {});
-    photos[hex] = {};
-    getJSON("https://api.planespotters.net/pub/photos/hex/" + hex).then(function (d) {
-      var ph = d.photos && d.photos[0];
-      if (ph) photos[hex] = { src: ph.thumbnail_large.src, by: ph.photographer };
-    }).catch(function () {});
   }
-  function schema(track) {  // silhouette vue de dessus, tournée selon le cap
-    var w = "#fff", g = '<g transform="rotate(' + track + ')" fill="' + w + '">' +
-      '<path d="M0,-88 C7,-88 9,-70 9,-54 L9,58 C9,72 4,84 0,88 C-4,84 -9,72 -9,58 L-9,-54 C-9,-70 -7,-88 0,-88Z"/>' +
-      '<path d="M9,-12 L88,22 L88,32 L9,18Z"/><path d="M-9,-12 L-88,22 L-88,32 L-9,18Z"/>' +
-      '<path d="M5,60 L34,78 L34,85 L4,78Z"/><path d="M-5,60 L-34,78 L-34,85 L-4,78Z"/>' +
-      '<rect x="32" y="4" width="9" height="18" rx="4"/><rect x="-41" y="4" width="9" height="18" rx="4"/></g>';
-    return '<circle r="96" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>' +
-      '<text y="-80" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="11" font-weight="800">N</text>' + g;
+  // lettres à palettes : seules les cases qui changent basculent
+  function flaps(el, text, n) {
+    text = (text + new Array(n + 1).join(" ")).slice(0, n).toUpperCase();
+    if (el.children.length !== n) el.innerHTML = new Array(n + 1).join("<span>&nbsp;</span>");
+    for (var i = 0; i < n; i++) {
+      var sp = el.children[i], ch = text[i];
+      if (sp.getAttribute("data-c") === ch) continue;
+      sp.setAttribute("data-c", ch); sp.textContent = ch === " " ? "\u00a0" : ch;
+      sp.classList.remove("flip"); void sp.offsetWidth; sp.classList.add("flip");
+    }
   }
   function drawPlane() {
     var now = Date.now();
     var list = Object.keys(planes).map(function (k) { var o = planes[k]; return { o: o, s: liveState(o, now) }; })
       .sort(function (a, b) { return a.s.dist - b.s.dist; });
     $("stale").textContent = planesLive || !planesAt ? "● en direct" : "relevé de " + hm(new Date(planesAt));
+    var head = '<div class="row head"><span>VOL</span><span>DE</span><span>VERS</span><span>APPAREIL</span>' +
+      "<span>ALTITUDE</span><span>VITESSE</span><span>CAP</span><span>DISTANCE</span></div>";
     if (!list.length) {
-      $("pcs").textContent = "CIEL VIDE"; $("pwho").textContent = "aucun avion à moins de " + Math.round(cfg.radius_km) + " km";
-      $("proute").textContent = ""; $("pstats").innerHTML = ""; $("pcredit").textContent = "";
-      $("pimg").style.display = "none"; $("pschema").innerHTML = ""; shownHex = ""; return;
+      topHex = ""; flaps($("pcs"), "CIEL VIDE", 9); flaps($("proute"), "", 9);
+      $("pwho").textContent = "aucun avion à moins de " + Math.round(cfg.radius_km) + " km";
+      $("board").innerHTML = head; return;
     }
-    var top = list[0], p = top.o.p, s = top.s, r = routes[p.callsign] || {};
+    var p = list[0].o.p, r = routes[p.callsign] || {};
+    topHex = p.hex;
     if (!aircraft[p.hex]) lookupAircraft(p.hex);
-    var ac = aircraft[p.hex] || {}, ph = photos[p.hex] || {};
-    $("pcs").textContent = p.callsign;
-    $("pwho").textContent = [r.airline || ac.owner, ac.model || p.type, ac.reg || p.reg].filter(Boolean).join(" · ");
-    $("proute").textContent = r.from ? r.from + " → " + r.to : "route inconnue";
-    if (ph.src) {
-      if (shownHex !== p.hex + ph.src) { $("pimg").src = ph.src; shownHex = p.hex + ph.src; }
-      $("pimg").style.display = "block"; $("pschema").innerHTML = "";
-      $("pcredit").textContent = "photo © " + ph.by + " · planespotters.net";
-    } else {
-      $("pimg").style.display = "none"; $("pschema").innerHTML = schema(p.track);
-      $("pcredit").textContent = "pas de photo pour cet appareil";
-    }
-    var vr = Math.round(p.vrate / 50) * 50;
-    var stats = [
-      [s.alt.toLocaleString("fr-FR") + " ft" + (vr > 300 ? " ↗" : vr < -300 ? " ↘" : ""), "ALTITUDE · " + Math.round(s.alt * .3048).toLocaleString("fr-FR") + " M"],
-      [Math.round(p.gs_kt * 1.852) + " km/h", "VITESSE · " + Math.round(p.gs_kt) + " KT"],
-      [Math.round(p.track) + "° " + compass(p.track), "CAP"],
-      [Math.abs(vr) < 100 ? "palier" : (vr > 0 ? "+" : "−") + Math.abs(vr).toLocaleString("fr-FR") + " ft/min", "VARIO"],
-      [fr(s.dist) + " km " + compass(s.brg), "DISTANCE"],
-      [p.squawk || "—", "TRANSPONDEUR"]
-    ];
-    $("pstats").innerHTML = stats.map(function (x) { return '<div class="st"><b>' + x[0] + "</b><span>" + x[1] + "</span></div>"; }).join("");
-    var o2 = list.slice(1, 8).map(function (x) {
+    var ac = aircraft[p.hex] || {};
+    flaps($("pcs"), p.callsign, 9);
+    flaps($("proute"), r.code ? r.code.replace(" – ", " → ") : "", 9);
+    $("pwho").textContent = [r.airline || ac.owner, ac.model || p.type, ac.reg || p.reg,
+      r.from ? r.from + " → " + r.to : ""].filter(Boolean).join(" · ");
+    $("board").innerHTML = head + list.slice(0, 4).map(function (x, i) {
+      var q = x.o.p, rr = routes[q.callsign] || {}, code = (rr.code || "").split(" – ");
+      var vr = q.vrate > 300 ? "↗" : q.vrate < -300 ? "↘" : " ";
+      return '<div class="row' + (i ? "" : " first") + '"><span>' + q.callsign + "</span><span>" + (code[0] || "—") +
+        "</span><span>" + (code[1] || "—") + "</span><span>" + q.type + "</span><span>" +
+        x.s.alt.toLocaleString("fr-FR") + " ft" + vr + "</span><span>" + Math.round(q.gs_kt * 1.852) + " km/h</span><span>" +
+        Math.round(q.track) + "°</span><span>" + fr(x.s.dist) + " " + compass(x.s.brg) + "</span></div>";
+    }).join("");
+    var o2 = list.slice(4, 10).map(function (x) {
       var q = x.o.p, rr = routes[q.callsign] || {};
       return "✈ " + q.callsign + " " + (rr.code || q.type) + " · " + x.s.alt.toLocaleString("fr-FR") + " ft · " + fr(x.s.dist) + " km";
     });
@@ -691,7 +751,7 @@
   }
   function frame() {
     if (cfg) {
-      if (current === "matin") drawChart(nowDate());
+      if (current === "matin") drawChart(nowDate()); else drawMini(Date.now());
       if (current !== "matin") $("headbar").style.transform = "scaleX(" + Math.min(1, (Date.now() - newsAt) / 12000) + ")";
     }
     requestAnimationFrame(frame);
@@ -731,7 +791,7 @@
   setInterval(function () { if (!wx) loadWeather(); }, 20000);
   setInterval(loadNews, 3 * 60000);
   setInterval(loadRT, 30000);
-  setInterval(loadPlanes, 5000);
+  setInterval(loadPlanes, 1000);
   setTimeout(function () { location.reload(); }, 6 * 3600000);  // au cas où le navigateur de la télé se fige
   requestAnimationFrame(frame);
 })();

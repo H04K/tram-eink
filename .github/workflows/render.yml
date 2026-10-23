@@ -39,6 +39,8 @@ jobs:
           key: gtfs-${{ github.run_id }}
           restore-keys: gtfs-
       - run: python -m tramdash
+        env:
+          ADSB_RELAY: ${{ vars.ADSB_RELAY }}  # Settings -> Variables : l'adresse du worker
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

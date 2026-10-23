@@ -81,12 +81,26 @@ en mode direct) : une page plein écran en noir et blanc, animée à la seconde,
   partir, trams en temps réel (lus directement chez TBM), séance du jour, pluie heure par heure ;
 - **le soir** (semaine, le reste de la journée) : météo de ce soir et de demain, heure de départ
   de demain, actu en direct de toutes les rubriques (franceinfo, Sud Ouest Bordeaux, Air Journal),
-  et la fiche de l'avion le plus proche (photo planespotters.net ou schéma orienté selon son cap,
-  compagnie, modèle, route, altitude, vitesse, cap, vario, distance, transpondeur, en continu) ;
+  et les avions en style panneau d'embarquement : indicatif et route en lettres à palettes,
+  tableau des vols (provenance, destination, appareil, altitude, vitesse, cap, distance) et
+  minimap centrée sur la maison (N S E O, l'avion avance en direct, zoom selon sa distance) ;
 - **le week-end** : la même chose, avec la météo du moment.
 
 Avant le lever et après le coucher du soleil, l'écran se teinte progressivement d'orange
 (lumière chaude, `WARM_MAX` dans `tv.html`).
+
+### Avions à la seconde
+
+Aucune source ADS-B gratuite n'autorise la lecture directe depuis un navigateur. Pour que la
+télé les lise chaque seconde, il faut un relais :
+
+- **Cloudflare Worker** (gratuit, rien à installer) : sur dash.cloudflare.com, *Workers →
+  Create → Hello World*, remplacer le code par `worker/planes.js`, *Deploy*. Mettre son adresse
+  (`https://xxx.workers.dev`) dans *Settings → Secrets and variables → Actions → Variables* du
+  dépôt, sous le nom `ADSB_RELAY` (ou dans l'adresse de la page : `?adsb=https://xxx.workers.dev`).
+- ou le **serveur maison** (`python -m tramdash.server`), qui sert `planes.json` rafraîchi chaque seconde.
+
+Sans relais, les avions viennent du relevé de GitHub (toutes les 10 min) et l'écran l'indique.
 
 Radio en bas à droite (Lofi, Nightwave Plaza, Yumi Co. Radio, Rainwave Chill et Gamesboro
 pour les musiques de jeux vidéo) : **OK** sur la télécommande pour

@@ -30,9 +30,9 @@ def current():
 
 
 def live_planes():
-    """Positions ADS-B fraîches (5 s max) : la page télé les anime en continu."""
+    """Positions ADS-B fraîches (1 s max) : la page télé les interroge chaque seconde."""
     with _lock:
-        if time.time() - _planes["at"] > 5:
+        if time.time() - _planes["at"] > 1:
             _planes["data"], _planes["at"] = aviation.positions(), time.time()
         return _planes["data"]
 

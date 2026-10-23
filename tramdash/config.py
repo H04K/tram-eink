@@ -40,6 +40,8 @@ COMMUTE_HOURS = (6, 7)                           # heures soulignées sur le gra
 # Aviation
 METAR_STATION = os.getenv("METAR_STATION", "LFBD")
 PLANES_RADIUS_KM = float(os.getenv("PLANES_RADIUS_KM", "20"))
+# relais Cloudflare (worker/planes.js) pour que la télé lise les avions chaque seconde
+ADSB_RELAY = os.getenv("ADSB_RELAY", "")
 
 # Écran : reTerminal E1001, 7,5" noir et blanc (COLOR=1 pour le E1002 Spectra 6)
 COLOR = os.getenv("COLOR", "0") == "1"

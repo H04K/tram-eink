@@ -110,7 +110,8 @@ def tv_config():
             "tram_until": C.TRAM_UNTIL, "workdays": sorted(C.WORKDAYS),
             "switch_hour": C.SWITCH_HOUR, "sessions": C.SESSIONS, "muscles": C.MUSCLES,
             "home": [C.HOME_LAT, C.HOME_LON], "weather": [C.LAT, C.LON],
-            "radius_km": C.PLANES_RADIUS_KM, "rt_url": C.GTFS_RT_TRIPS_URL}
+            "radius_km": C.PLANES_RADIUS_KM, "rt_url": C.GTFS_RT_TRIPS_URL,
+            "adsb_relay": C.ADSB_RELAY}
 
 
 def main():

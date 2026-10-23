@@ -1,0 +1,99 @@
+"""python -m tramdash  ->  public/dashboard.png + dashboard.bin + status.json"""
+import json
+import os
+from datetime import datetime, timedelta
+
+from . import aviation, render, tbm, weather
+from . import config as C
+from .render import fr
+
+
+def at(day, hhmm):
+    return datetime.combine(day, datetime.strptime(hhmm, "%H:%M").time(), C.TZ)
+
+
+def commute(day, now, wx):
+    """Contenu du panneau ALLER."""
+    walk = timedelta(minutes=C.WALK_MIN)
+    live = day == now.date()
+    lo, hi = at(day, C.TRAM_FROM), at(day, C.TRAM_UNTIL)
+    deps = tbm.departures(day)
+    window = [x for x in deps if lo <= x.dep <= hi + timedelta(seconds=59)]
+    options = [x for x in window if x.dep - walk >= now] if live else window
+    ideal = at(day, C.LEAVE_AT)
+    best = next((x for x in options if x.dep - walk >= ideal), options[0] if options else None)
+
+    h = wx.at(6) if wx else {}
+    if not h:
+        foot = ""
+    elif h["mm"] >= 0.2 or h["prob"] >= 50:
+        foot = f"pluie, {fr(h['mm'])} mm/h"
+    elif h["prob"] >= 25:
+        foot = f"risque d'averse {h['prob']}%"
+    else:
+        foot = "sec"
+    if h:
+        foot += f" · {round(h['temp'])}° au départ"
+        if h["gust"] >= 45:
+            foot += f" · rafales {round(h['gust'])} km/h"
+
+    if best is None:
+        later = [x for x in deps if x.dep > hi]
+        return dict(big="RATÉ", urgent=live, foot=foot,
+                    line1=f"plus de tram avant {C.TRAM_UNTIL}",
+                    line2=f"prochain : {later[0].dep:%H:%M}" if later else "")
+    leave = best.dep - walk
+    mins = (leave - now).total_seconds() / 60
+
+    def label(x):
+        s = f"{x.dep:%H:%M}"
+        return s + (f" ({x.delay_min:+d})" if x.realtime and x.delay_min else "")
+
+    i = options.index(best)
+    shown = options[i:i + 3]
+    line2 = f"depuis {C.FROM_NAME}"
+    if live and 0 <= mins < 60:
+        line2 = f"dans {int(mins)} min · {C.FROM_NAME}"
+    return dict(big=f"{leave:%H:%M}", urgent=live and mins <= 3, foot=foot,
+                line1="tram " + " · ".join(label(x) for x in shown), line2=line2)
+
+
+def main():
+    now = datetime.now(C.TZ)
+    if os.getenv("NOW"):  # pour tester : NOW="2026-10-26T06:10"
+        now = datetime.fromisoformat(os.environ["NOW"]).replace(tzinfo=C.TZ)
+
+    today, tomorrow = now.date(), now.date() + timedelta(days=1)
+    if today.weekday() in C.WORKDAYS and now.hour < C.SWITCH_HOUR:
+        mode, day = "commute", today
+    elif now.hour >= C.SWITCH_HOUR and tomorrow.weekday() in C.WORKDAYS:
+        mode, day = "commute", tomorrow
+    else:
+        mode, day = "planes", today
+
+    state = dict(now=now, day=day, mode=mode, weather=weather.forecast(day),
+                 metar=aviation.metar(), alerts=[])
+    if mode == "commute":
+        state["commute"] = commute(day, now, state["weather"])
+        state["session"] = C.SESSIONS.get(day.weekday(), "REPOS")
+        state["next_session"] = C.SESSIONS.get((day + timedelta(days=1)).weekday())
+        state["alerts"] = tbm.alerts(now)
+    else:
+        state["planes"] = aviation.planes()
+
+    os.makedirs(C.OUT_DIR, exist_ok=True)
+    img = render.render(state)
+    img.save(os.path.join(C.OUT_DIR, "dashboard.png"))
+    with open(os.path.join(C.OUT_DIR, "dashboard.bin"), "wb") as f:
+        f.write(render.to_bin(img))
+    # le firmware lit "refresh" pour savoir quand revenir
+    refresh = 300 if mode == "planes" or (mode == "commute" and day == today) else 1800
+    with open(os.path.join(C.OUT_DIR, "status.json"), "w") as f:
+        json.dump({"generated": now.isoformat(), "mode": mode, "refresh_s": refresh,
+                   "commute": state.get("commute"), "metar": state["metar"]},
+                  f, ensure_ascii=False, indent=1)
+    print(f"ok: {mode} {day}", state.get("commute") or len(state.get("planes") or []))
+
+
+if __name__ == "__main__":
+    main()

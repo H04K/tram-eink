@@ -42,6 +42,36 @@ COLOR=1 python -m tramdash                           # version E1002 (6 couleurs
 Tous les réglages (arrêts, horaires, séances, rayon radar…) sont dans
 `tramdash/config.py` et se surchargent par variable d'environnement.
 
+## Mode direct (recommandé si une machine tourne en permanence à la maison)
+
+GitHub Pages ne sert que des images calculées d'avance (toutes les 5-10 min, cron
+GitHub pas toujours ponctuel). En mode direct, l'image est calculée **au moment où
+l'écran la demande**, et l'écran revient toutes les minutes pendant le trajet et le
+week-end en journée :
+
+```sh
+LIVE=1 python -m tramdash.server      # http://<ip-de-la-machine>:8080/dashboard.png
+```
+
+N'importe quoi d'allumé en continu suffit : Raspberry Pi, NAS, vieux PC. Avec un
+rafraîchissement par minute, l'écran tient quelques jours sur batterie : mieux vaut le
+laisser branché en USB-C.
+
+## Mettre l'image sur l'écran (firmware)
+
+`firmware/tram_eink/tram_eink.ino`, pour Arduino IDE :
+
+1. Gestionnaire de cartes : ajouter
+   `https://espressif.github.io/arduino-esp32/package_esp32_index.json`, installer **esp32**.
+2. Gestionnaire de bibliothèques : installer **GxEPD2**.
+3. Copier `secrets.example.h` en `secrets.h`, mettre le Wi-Fi et `BASE_URL`
+   (GitHub Pages ou serveur direct).
+4. Carte **XIAO_ESP32S3**, *Tools → PSRAM → OPI PSRAM*, brancher le reTerminal en USB-C,
+   téléverser.
+
+L'écran se réveille, lit `status.json` (`refresh_s`), télécharge `dashboard.bin`, ne
+redessine que si l'image a changé, puis se rendort. Bouton vert : rafraîchir tout de suite.
+
 ## Mise en ligne
 
 1. Pousser ce dépôt sur GitHub.

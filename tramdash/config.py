@@ -52,5 +52,9 @@ GTFS_STATIC_URL = f"https://bdx.mecatran.com/utw/ws/gtfsfeed/static/bordeaux?api
 GTFS_RT_TRIPS_URL = f"https://bdx.mecatran.com/utw/ws/gtfsfeed/realtime/bordeaux?apiKey={_KEY}"
 GTFS_RT_ALERTS_URL = f"https://bdx.mecatran.com/utw/ws/gtfsfeed/alerts/bordeaux?apiKey={_KEY}"
 
+# LIVE=1 : l'image est calculée à chaque demande de l'écran (python -m tramdash.server),
+# qui revient alors toutes les minutes au lieu de toutes les 5-10 min.
+LIVE = os.getenv("LIVE", "0") == "1"
+
 CACHE_DIR = os.getenv("CACHE_DIR", ".cache")
 OUT_DIR = os.getenv("OUT_DIR", "public")

@@ -58,11 +58,18 @@ def commute(day, now, wx):
                 line1="tram " + " · ".join(label(x) for x in shown), line2=line2)
 
 
-def main():
-    now = datetime.now(C.TZ)
-    if os.getenv("NOW"):  # pour tester : NOW="2026-10-26T06:10"
-        now = datetime.fromisoformat(os.environ["NOW"]).replace(tzinfo=C.TZ)
+def refresh_s(mode, day, now):
+    """Dans combien de secondes l'écran doit revenir chercher une image."""
+    fast = 60 if C.LIVE else 300
+    if mode == "commute" and day == now.date() and now < at(day, C.TRAM_UNTIL):
+        return fast
+    if mode == "planes" and 7 <= now.hour < 22:
+        return fast if C.LIVE else 600
+    return 1800
 
+
+def build(now):
+    """Calcule l'écran pour l'instant `now` : (image, statut)."""
     today, tomorrow = now.date(), now.date() + timedelta(days=1)
     if today.weekday() in C.WORKDAYS and now.hour < C.SWITCH_HOUR:
         mode, day = "commute", today
@@ -81,18 +88,24 @@ def main():
     else:
         state["planes"] = aviation.planes()
 
+    status = {"generated": now.isoformat(), "mode": mode, "refresh_s": refresh_s(mode, day, now),
+              "commute": state.get("commute"), "metar": state["metar"]}
+    return render.render(state), status
+
+
+def main():
+    now = datetime.now(C.TZ)
+    if os.getenv("NOW"):  # pour tester : NOW="2026-10-26T06:10"
+        now = datetime.fromisoformat(os.environ["NOW"]).replace(tzinfo=C.TZ)
+    img, status = build(now)
+
     os.makedirs(C.OUT_DIR, exist_ok=True)
-    img = render.render(state)
     img.save(os.path.join(C.OUT_DIR, "dashboard.png"))
     with open(os.path.join(C.OUT_DIR, "dashboard.bin"), "wb") as f:
         f.write(render.to_bin(img))
-    # le firmware lit "refresh" pour savoir quand revenir
-    refresh = 300 if mode == "planes" or (mode == "commute" and day == today) else 1800
     with open(os.path.join(C.OUT_DIR, "status.json"), "w") as f:
-        json.dump({"generated": now.isoformat(), "mode": mode, "refresh_s": refresh,
-                   "commute": state.get("commute"), "metar": state["metar"]},
-                  f, ensure_ascii=False, indent=1)
-    print(f"ok: {mode} {day}", state.get("commute") or len(state.get("planes") or []))
+        json.dump(status, f, ensure_ascii=False, indent=1)
+    print("ok:", status["mode"], status["generated"], status.get("commute") or "")
 
 
 if __name__ == "__main__":

@@ -98,8 +98,9 @@
   #mini { left: 20px; top: 16px; }
   #plabel { left: 262px; top: 22px; right: 24px; display: flex; justify-content: space-between; font-size: 17px; }
   .flaps span { display: inline-block; position: relative; text-align: center; margin-right: 4px; border-radius: 4px;
-    background: #242424; color: #fff; font-family: "IBM Plex Mono", monospace; font-weight: 500; }
-  .flaps span::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #000; }
+    color: #fff; font-family: "IBM Plex Mono", monospace; font-weight: 500;
+    /* la fente entre les deux palettes, dessinée derrière la lettre pour ne pas la couper */
+    background: linear-gradient(#2a2a2a 0 49%, #000 49% 51%, #1f1f1f 51%); }
   .flaps span.flip { animation: flip .4s ease-out; }
   @keyframes flip { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
   #pcs { left: 262px; top: 54px; }

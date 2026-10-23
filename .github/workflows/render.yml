@@ -40,7 +40,7 @@ jobs:
           restore-keys: gtfs-
       - run: python -m tramdash
         env:
-          ADSB_RELAY: ${{ vars.ADSB_RELAY }}  # Settings -> Variables : l'adresse du worker
+          ADSB_RELAY: ${{ vars.ADSB_RELAY }}  # optionnel : remplace le relais de config.py
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

@@ -129,7 +129,8 @@ def main():
     # pages pour un navigateur (télé, tablette) : la version animée et l'image e-ink seule
     here = os.path.dirname(__file__)
     shutil.copy(os.path.join(here, "tv.html"), os.path.join(C.OUT_DIR, "index.html"))
-    shutil.copy(os.path.join(here, "image.html"), os.path.join(C.OUT_DIR, "image.html"))
+    for name in ("image.html", "manifest.webmanifest", "icon.png"):
+        shutil.copy(os.path.join(here, name), os.path.join(C.OUT_DIR, name))
     print("ok:", status["mode"], status["generated"], status.get("commute") or "")
 
 

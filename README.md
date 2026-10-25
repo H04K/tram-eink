@@ -109,6 +109,10 @@ flèches pour changer, ou le nom de la station pour ouvrir la liste. Les positio
 maison ; sur GitHub Pages elles datent du dernier passage (10 min) et sont extrapolées.
 `image.html` affiche simplement l'image de l'écran e-ink.
 
+Sur tablette : ouvrir la page, menu du navigateur → *Ajouter la page à → Écran d'accueil*, puis la
+lancer depuis l'icône : elle s'ouvre en plein écran comme une appli. Si les couleurs sont inversées,
+désactiver le mode sombre du navigateur pour les sites.
+
 Pour tester une autre heure : `?now=2026-10-26T06:20` ; sans radio : `?radio=0`.
 
 ## Mise en ligne

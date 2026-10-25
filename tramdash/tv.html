@@ -3,10 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.png">
 <title>tram-eink TV</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
+  :root { color-scheme: only light; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; cursor: none; background: #fff; color: #000;
     -webkit-tap-highlight-color: transparent; user-select: none; }
@@ -276,7 +283,7 @@
   function nowDate() { return new Date(Date.now() + OFFSET); }
   if (OFFSET) document.addEventListener("DOMContentLoaded", function () { $("warm").style.transition = "none"; });
 
-  var status = null, cfg = null, wx = null, rt = {}, planes = {}, planesLive = false, planesAt = 0, routes = {};
+  var status = null, cfg = null, wx = null, rt = {}, planes = {}, planesLive = false, planesAt = 0, liveOk = 0, routes = {};
   var news = [], newsIdx = 0, newsAt = 0, others = [];
 
   function pad(n) { return (n < 10 ? "0" : "") + n; }
@@ -309,7 +316,7 @@
   function loadStatus() {
     return getJSON("status.json").then(function (s) {
       status = s; cfg = s.config;
-      if (!planesLive && s.planes) setPlanes(s.planes, new Date(s.generated).getTime(), false);
+      if (Date.now() - liveOk > 15000 && s.planes) setPlanes(s.planes, new Date(s.generated).getTime(), false);
       updateTicker();
     });
   }
@@ -420,7 +427,9 @@
       if (!routes[p.callsign]) lookupRoute(p.callsign);
     });
     Object.keys(planes).forEach(function (k) { if (!seen[k]) delete planes[k]; });
-    planesLive = live; planesAt = at;
+    planesAt = at;
+    if (live) liveOk = Date.now();
+    planesLive = Date.now() - liveOk < 15000;
   }
   var planesBusy = false;
   function loadPlanes() {
@@ -432,7 +441,8 @@
     getJSON(url).then(function (d) {
       if (d.ac) setPlanes(fromADSB(d.ac), Date.now(), true);
       else if (d.planes) setPlanes(d.planes, Date.now(), d.live !== false);
-    }).catch(function () { planesLive = false; }).then(function () { planesBusy = false; });
+    }).catch(function () { planesLive = Date.now() - liveOk < 15000; })  // un raté isolé ne coupe pas le direct
+      .then(function () { planesBusy = false; });
   }
   // réponse brute d'adsb.lol (via le relais) -> même forme que status.json
   function fromADSB(ac) {
@@ -818,6 +828,13 @@
   document.addEventListener("click", function (e) { if (picker && !picker.contains(e.target)) closePicker(); });
   $("station").textContent = STATIONS[st].name;
   $("hint").textContent = HINT_OFF;
+  // tablette dans le navigateur : le premier toucher passe en plein écran
+  document.addEventListener("click", function () {
+    var el = document.documentElement, fs = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (TOUCH && fs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      try { var r = fs.call(el); if (r && r.catch) r.catch(function () {}); } catch (e) {}
+    }
+  });
   if (params.get("radio") !== "0") play();
 
   function boot() {  // réessaie toutes les 10 s tant que status.json n'est pas arrivé

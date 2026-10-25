@@ -55,6 +55,10 @@ class Handler(BaseHTTPRequestHandler):
             with open(os.path.join(os.path.dirname(__file__), PAGES[path]), "rb") as f:
                 self.send(f.read(), "text/html; charset=utf-8")
             return
+        if path in ("/manifest.webmanifest", "/icon.png"):
+            with open(os.path.join(os.path.dirname(__file__), path[1:]), "rb") as f:
+                self.send(f.read(), "image/png" if path.endswith(".png") else "application/manifest+json")
+            return
         if path == "/planes.json":
             self.send(json.dumps({"live": True, "planes": live_planes()}).encode(), "application/json")
             return

@@ -104,7 +104,8 @@ Sans relais, les avions viennent du relevé de GitHub (toutes les 10 min) et l'�
 
 Radio en bas à droite (France Inter, Nostalgie, Lofi, Nightwave Plaza, Yumi Co. Radio, Rainwave Chill et Gamesboro
 pour les musiques de jeux vidéo) : **OK** sur la télécommande pour
-lancer / couper, **◀ ▶** pour changer. Les positions d'avions sont en direct avec le serveur
+lancer / couper, **◀ ▶** pour changer. Sur tablette : toucher ▶ pour lancer / couper, les
+flèches pour changer, ou le nom de la station pour ouvrir la liste. Les positions d'avions sont en direct avec le serveur
 maison ; sur GitHub Pages elles datent du dernier passage (10 min) et sont extrapolées.
 `image.html` affiche simplement l'image de l'écran e-ink.
 
